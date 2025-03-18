@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.Sqlite;
 using DotNetFlix.Data;
 using DotNetFlix.Pages;
+using Microsoft.AspNetCore.Http.Features;
 
 namespace DotNetFlix;
 
@@ -32,6 +33,14 @@ internal class WebServer
             .ConfigureServices(s =>
             {
                 s.AddSingleton(this);
+                s.Configure<FormOptions>(options =>
+                {
+                    options.MultipartBodyLengthLimit = 1024L * 1024L * 1024L * 32L;
+                });
+            })
+            .ConfigureKestrel(s =>
+            {
+                s.Limits.MaxRequestBodySize = 1024L * 1024L * 1024L * 32L;
             })
             .Build()
             .RunAsync();
@@ -47,7 +56,7 @@ internal class WebServer
             session = Sql.CreateSession();
             context.SetSessionToken(session.Token);
             session.Page = nameof(Home);
-            Sql.SetSessionResource(session.Id, session.Page);
+            Sql.SetSessionPage(session.Id, session.Page);
         }
 
         var page = Page.Instance(session.Page);

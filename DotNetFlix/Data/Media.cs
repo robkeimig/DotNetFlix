@@ -50,9 +50,9 @@ public static class MediaExtensions
         var fileTransferUtility = new TransferUtility(s3Client);
         var contentId = Guid.NewGuid();
         var contentPreloadId = Guid.NewGuid();
-        var contentFile = contentId.ToString("N");
+        var contentFile = contentId.ToString("N")+".mp4";
         var encryptedContentFile = contentFile + ".enc";
-        var contentPreloadFile = contentPreloadId.ToString("N");
+        var contentPreloadFile = contentPreloadId.ToString("N")+".mp4";
         var encryptedContentPreloadFile = contentPreloadFile + ".enc";
         var encryptionKey = Cryptography.GetBytes();
 

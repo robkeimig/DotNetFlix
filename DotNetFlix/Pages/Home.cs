@@ -13,18 +13,17 @@ internal class Home : Page
     public override async Task<string> Get(SqliteConnection sql, long sessionId)
     {
         var movies = sql.GetMovies(sessionId);
-
         return HtmlTemplate(Html(movies), Css(), Js());
     }
 
-    public override Task Post(SqliteConnection sql, long sessionId, IFormCollection form)
+    public override async Task Post(SqliteConnection sql, long sessionId, IFormCollection form)
     {
         var action = form[Action];
 
         switch (action)
         {
             case UploadAction:
-                throw new NotImplementedException("TODO: Next work area.");
+                sql.SetSessionPage(sessionId, nameof(Upload)); 
                 break;
             default:
                 throw new NotImplementedException();
@@ -33,10 +32,10 @@ internal class Home : Page
 
     string Html(List<Movie> movies) => $@"
 <div class='container' />
-    <h1>Movies</h1>
     <form action='/' method='POST' enctype='multipart/data'>
-        <button type='submit' name='{Action}' value='{UploadAction}'>Upload Movie</button>
+        <button type='submit' name='{Action}' value='{UploadAction}'>Upload Media</button>
     </form>
+    <h1>Movies</h1>
     <table>
         <tr>
             <th>Title</th>
