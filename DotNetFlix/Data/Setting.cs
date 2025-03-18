@@ -1,4 +1,5 @@
-﻿using Dapper;
+﻿using System.Security.Cryptography;
+using Dapper;
 using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Data;
