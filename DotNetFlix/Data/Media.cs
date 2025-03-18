@@ -34,7 +34,8 @@ public static class MediaExtensions
     public static void WarmupMedia(this SqliteConnection sql, long mediaId)
     {
         //TODO: 
-        //1. Set IsPending = 1 for this media item.
+        //0. Check if IsPending=1 and abandon if it is. 
+        //1. Set IsPending = 1 for this media item. Use txn scope around 0/1.
         //2. Begin pulling the main content asynchronously on a background task. This task should set IsPending=0 before returning.
         //3. Pull the content preload synchronously on this thread.
         //4. Decrypt content preload & place in cache folder.
