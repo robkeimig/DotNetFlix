@@ -118,7 +118,7 @@ public static class SessionExtensions
         return session;
     }
 
-    public static void SetSessionResource(this SqliteConnection sql, long sessionId, string resource)
+    public static void SetSessionResource(this SqliteConnection sql, long sessionId, string page)
     {
         sql.Execute($@"
             UPDATE {SessionsTable.TableName}
@@ -126,7 +126,7 @@ public static class SessionExtensions
             WHERE   [{nameof(SessionsTable.Id)}] = @{nameof(SessionsTable.Id)}", new
         {
             Id = sessionId,
-            Resource = resource,
+            Page = page,
         });
     }
 }

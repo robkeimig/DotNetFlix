@@ -77,19 +77,17 @@ internal class WebStartup
 
 internal static class WebExtensions
 {
-    internal static IApplicationBuilder UseWebServer(
-        this IApplicationBuilder app,
-        WebServer server) =>
-            app.Use(async (HttpContext c, Func<Task> _) =>
+    internal static IApplicationBuilder UseWebServer(this IApplicationBuilder app, WebServer server) =>
+        app.Use(async (HttpContext c, Func<Task> _) =>
+        {
+            try
             {
-                try
-                {
-                    await server.ProcessHttpContext(c);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
-                    throw;
-                }
-            });
+                await server.ProcessHttpContext(c);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+                throw;
+            }
+        });
 }
