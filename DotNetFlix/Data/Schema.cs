@@ -39,5 +39,14 @@ CREATE TABLE {SessionsTable.TableName} (
     [{nameof(SessionsTable.Id)}] INTEGER PRIMARY KEY,
     [{nameof(SessionsTable.Token)}] TEXT,
     [{nameof(SessionsTable.Page)}] TEXT,
-    [{nameof(SessionsTable.CreatedUnixTimestamp)}] INTEGER);");
+    [{nameof(SessionsTable.CreatedUnixTimestamp)}] INTEGER);
+
+CREATE TABLE {SessionsTable.TableName} (
+    [{nameof(SessionsTable.Id)}] INTEGER PRIMARY KEY,
+    [{nameof(SessionsTable.Token)}] TEXT,
+    [{nameof(SessionsTable.Page)}] TEXT,
+    [{nameof(SessionsTable.CreatedUnixTimestamp)}] INTEGER);
+
+
+");
 }

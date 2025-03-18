@@ -34,11 +34,10 @@ public abstract class Page
     public abstract Task Post(SqliteConnection sql, long sessionId, IFormCollection form);
 
     public static string HtmlTemplate(string html, string css, string js) => $@"
-    const string Html = @""
 <!DOCTYPE html>
-<html xmlns=""""http://www.w3.org/1999/xhtml"""">
+<html xmlns=""http://www.w3.org/1999/xhtml"">
 <head>
-    <meta charset=""""utf-8"""" />
+    <meta charset=""utf-8"" />
     <title>DotNetFlix</title>
     
     <style>
@@ -46,9 +45,6 @@ public abstract class Page
             background-color:#000;
             margin: 0;
             height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
         }}
 
         {css}
@@ -62,8 +58,6 @@ public abstract class Page
         {js}      
     </script>
 </body>
-
 </html>
-"";
 ";
 }
