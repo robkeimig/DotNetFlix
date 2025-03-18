@@ -31,6 +31,16 @@ public class MediaTable
 
 public static class MediaExtensions
 {
+    public static void WarmupMedia(this SqliteConnection sql, long mediaId)
+    {
+        //TODO: 
+        //1. Set IsPending = 1 for this media item.
+        //2. Begin pulling the main content asynchronously on a background task. This task should set IsPending=0 before returning.
+        //3. Pull the content preload synchronously on this thread.
+        //4. Decrypt content preload & place in cache folder.
+        //5. Return to caller. Ideally this whole process completes synchronously under ~3 seconds.
+    }
+
     public static Media CreateMedia(this SqliteConnection sql, string uploadedFile, string title)
     {
         var configuration = sql.GetConfiguration();
