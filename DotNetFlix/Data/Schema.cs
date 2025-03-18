@@ -35,5 +35,9 @@ CREATE TABLE {SettingsTable.TableName} (
     [{nameof(SettingsTable.Key)}] TEXT,
     [{nameof(SettingsTable.Value)}] TEXT);
 
-");
+CREATE TABLE {SessionsTable.TableName} (
+    [{nameof(SessionsTable.Id)}] INTEGER PRIMARY KEY,
+    [{nameof(SessionsTable.Token)}] TEXT,
+    [{nameof(SessionsTable.Page)}] TEXT,
+    [{nameof(SessionsTable.CreatedUnixTimestamp)}] INTEGER);");
 }
