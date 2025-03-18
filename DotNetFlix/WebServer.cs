@@ -46,7 +46,7 @@ internal class WebServer
         {
             session = Sql.CreateSession();
             context.SetSessionToken(session.Token);
-            session.Page = nameof(Player);
+            session.Page = nameof(Home);
             Sql.SetSessionResource(session.Id, session.Page);
         }
 
@@ -80,6 +80,16 @@ internal static class WebExtensions
     internal static IApplicationBuilder UseWebServer(
         this IApplicationBuilder app,
         WebServer server) =>
-            app.Use((HttpContext c, Func<Task> _) =>
-                server.ProcessHttpContext(c));
+            app.Use(async (HttpContext c, Func<Task> _) =>
+            {
+                try
+                {
+                    await server.ProcessHttpContext(c);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                    throw;
+                }
+            });
 }

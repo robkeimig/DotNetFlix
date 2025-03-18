@@ -3,26 +3,17 @@ using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Pages;
 
-public class Player : Page
+internal class Home : Page
 {
     public override bool IsDefault => true;
 
-    public override Task<string> Get(SqliteConnection sql, long sessionId)
+    public override async Task<string> Get(SqliteConnection sql, long sessionId)
     {
-        return Task.FromResult(HtmlTemplate(Html, Css, Js));
+        return "Hello!";
     }
 
     public override Task Post(SqliteConnection sql, long sessionId, IFormCollection form)
     {
         throw new NotImplementedException();
     }
-
-    string Html = $@"
-<p>Inner html</p>
-";
-
-    string Css = @"";
-
-    string Js = @"";
-
 }
