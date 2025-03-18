@@ -12,6 +12,12 @@ internal class Cryptography
     const int KeyLengthBytes = 64;
     const int Iterations = 1_000_000;
 
+    public static string GenerateTokenString() =>
+       Convert.ToBase64String(RandomNumberGenerator.GetBytes(48))
+       .Replace("/", "")
+       .Replace("=", "")
+       .Replace("+", "");
+
     public static byte[] GetBytes(string password)
     {
         using var pbkdf2 = new Rfc2898DeriveBytes(password, Salt, Iterations, HashAlgorithmName.SHA512);

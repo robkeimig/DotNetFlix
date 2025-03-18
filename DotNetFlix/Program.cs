@@ -18,7 +18,7 @@ sql.InitializeSettings();
 sql.InitializeCryptography(systemPassword);
 
 var configuration = sql.GetConfiguration();
-var webServer = new WebServer();
+var webServer = new WebServer(sql);
 
 while (true)
 {

@@ -5,12 +5,12 @@ namespace DotNetFlix.Pages;
 
 public class Upload : Page
 {
-    public override Task<Content> Get(SqliteConnection sql)
+    public override Task<string> Get(SqliteConnection sql, long sessionId)
     {
         throw new NotImplementedException();
     }
 
-    public override Task Post(SqliteConnection sql, IFormCollection form)
+    public override Task Post(SqliteConnection sql, long sessionId, IFormCollection form)
     {
         throw new NotImplementedException();
     }

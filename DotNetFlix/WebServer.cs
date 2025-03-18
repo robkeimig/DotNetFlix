@@ -5,13 +5,20 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Data.Sqlite;
+using DotNetFlix.Data;
+using DotNetFlix.Pages;
 
 namespace DotNetFlix;
 
 internal class WebServer
 {
-    public WebServer()
+    readonly SqliteConnection Sql;
+
+    public WebServer(SqliteConnection sql)
     {
+        Sql = sql;
+
         WebHost.CreateDefaultBuilder()
             .UseKestrel(k =>
             {
@@ -32,38 +39,31 @@ internal class WebServer
 
     internal async Task ProcessHttpContext(HttpContext context)
     {
-        await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(Html));
-    }
+        var cookie = context.GetSessionToken();
+        var session = Sql.GetSession(cookie);
 
-    const string Html = @"
-<!DOCTYPE html>
-<html xmlns=""http://www.w3.org/1999/xhtml"">
-<head>
-    <meta charset=""utf-8"" />
-    <title>DotNetFlix</title>
-    
-    <style>
-        body, html {
-            background-color:#000;
-            margin: 0;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        if (session == null)
+        {
+            session = Sql.CreateSession();
+            context.SetSessionToken(session.Token);
+            session.Page = nameof(Player);
+            Sql.SetSessionResource(session.Id, session.Page);
         }
-    </style>
 
-    <script>
-       
-    </script>
-</head>
+        var page = Page.Instance(session.Page);
 
-<body>
-    <p>Hello!</p>
-</body>
+        if (context.Request.Method.Equals("post", StringComparison.CurrentCultureIgnoreCase))
+        {
+            var form = await context.Request.ReadFormAsync();
+            var action = form.FirstOrDefault(x => x.Key == Page.Action).Value.ToString();
+            await page.Post(Sql, session.Id, form);
+            session = Sql.GetSession(session.Id);
+            page = Page.Instance(session.Page);
+        }
 
-</html>
-";
+        var content = await page.Get(Sql, session.Id);
+        await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(content), context.RequestAborted);
+    }
 }
 
 internal class WebStartup
