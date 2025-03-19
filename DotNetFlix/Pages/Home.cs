@@ -1,4 +1,5 @@
-﻿using DotNetFlix.Data;
+﻿using System.Text;
+using DotNetFlix.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Data.Sqlite;
 
@@ -10,24 +11,34 @@ internal class Home : Page
 
     public override bool IsDefault => true;
 
-    public override async Task<string> Get(SqliteConnection sql, long sessionId)
+    public override async Task ProcessHttpContext(HttpContext context, SqliteConnection sql, long sessionId)
+    {
+        var session = sql.GetSession(sessionId);
+
+        if (context.Request.Method.Equals("post", StringComparison.CurrentCultureIgnoreCase))
+        {
+            var form = await context.Request.ReadFormAsync();
+            
+            switch (form[Action])
+            {
+                case UploadAction:
+                    sql.SetSessionPage(sessionId, nameof(Upload));
+                    await Instance(nameof(Upload)).ProcessHttpContext(context, sql, session.Id);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        else
+        {
+            await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(View(sql, sessionId)), context.RequestAborted);
+        }
+    }
+
+    string View(SqliteConnection sql, long sessionId)
     {
         var movies = sql.GetMovies(sessionId);
         return HtmlTemplate(Html(movies), Css(), Js());
-    }
-
-    public override async Task Post(SqliteConnection sql, long sessionId, IFormCollection form)
-    {
-        var action = form[Action];
-
-        switch (action)
-        {
-            case UploadAction:
-                sql.SetSessionPage(sessionId, nameof(Upload)); 
-                break;
-            default:
-                throw new NotImplementedException();
-        }
     }
 
     string Html(List<Movie> movies) => $@"

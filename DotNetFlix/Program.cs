@@ -13,6 +13,7 @@ var systemPasswordJson = File.ReadAllText(nameof(SystemPassword)+".json");
 var systemPassword = JsonSerializer.Deserialize<SystemPassword>(systemPasswordJson).Password;
 var sql = new SqliteConnection("Data Source = data.db");
 
+sql.Open();
 sql.EnsureSchema();
 sql.InitializeSettings();
 sql.InitializeCryptography(systemPassword);
