@@ -8,6 +8,8 @@ namespace DotNetFlix.Pages;
 
 internal class Upload : Page
 {
+    const string UploadFileNameKey = "UploadFileName";
+
     const int UploadPartSize = 1024 * 1024 * 5;
 
     const string FileInputElement = "File";
@@ -21,17 +23,22 @@ internal class Upload : Page
     const string UploadPartAction = "UploadPart";
     const string CompleteUploadAction = "CompleteUpload";
 
-    public override async Task ProcessHttpContext(HttpContext context, SqliteConnection sql, long sessionId)
+    public override async Task Get(HttpContext context, SqliteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
+        var view = HtmlTemplate(Html(), Css(), Js());
+        await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(view), context.RequestAborted);
+    }
 
-        if (context.Request.Method.Equals("post", StringComparison.CurrentCultureIgnoreCase))
+    public override async Task Post(HttpContext context, SqliteConnection sql, long sessionId)
+    {
+        var session = sql.GetSession(sessionId);
+        var form = await context.Request.ReadFormAsync();
+
+        switch (form[Action])
         {
-            var form = await context.Request.ReadFormAsync();
-
-            switch (form[Action])
-            {
-                case BeginUploadAction:
+            case BeginUploadAction:
+                {
                     var fileName = form[FileName];
                     var fileSizeString = form[FileSize];
 
@@ -48,31 +55,43 @@ internal class Upload : Page
                         totalParts = totalParts
                     });
 
-                    context.Response.ContentType = "application/json";  
+                    var uploadFileName = Guid.NewGuid().ToString("N") + new FileInfo(fileName).Extension;
+                    sql.SetSessionData(sessionId, UploadFileNameKey, uploadFileName);
+                    context.Response.ContentType = "application/json";
                     await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(beginUploadResponseJson), context.RequestAborted);
                     break;
-                case UploadPartAction:
-                    var filePartSequence = form[FilePartSequence];
+                }
+            case UploadPartAction:
+                {
+                    var filePartSequenceString = form[FilePartSequence];
                     var file = form.Files[0];
+                    
+                    if (!long.TryParse(filePartSequenceString, out long filePartSequence))
+                    {
+                        throw new ArgumentException();
+                    }
+
+                    var uploadFileName = sql.GetSessionData(sessionId, UploadFileNameKey);
+                    using var fileStream = new FileStream(uploadFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write, 4096, true);
+                    fileStream.Seek(filePartSequence * UploadPartSize, SeekOrigin.Begin);
+                    await file.CopyToAsync(fileStream);
                     Console.WriteLine(filePartSequence);
                     break;
-                case CompleteUploadAction:
-
+                }
+            case CompleteUploadAction:
+                {
+                    await Get(context, sql, sessionId);
                     break;
-                default:
-                    throw new NotImplementedException();
-
-            }
+                }
+            case CancelAction:
+                {
+                    sql.SetSessionPage(sessionId, nameof(Home));
+                    await Instance(nameof(Home)).Get(context, sql, sessionId);
+                    break;
+                }
+            default:
+                throw new NotImplementedException();
         }
-        else
-        {
-            await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(View(sql, sessionId)), context.RequestAborted);
-        }
-    }
-
-    string View(SqliteConnection sql, long sessionId)
-    {
-        return HtmlTemplate(Html(), Css(), Js());
     }
 
     string Html() => $@"
@@ -147,7 +166,7 @@ document.getElementById('{UploadButtonElement}').addEventListener('click', async
     beginForm.append(""{FileName}"", file.name);
     beginForm.append(""{FileSize}"", file.size);
 
-    const response = await fetch('/{BeginUploadAction}', {{
+    const response = await fetch('/', {{
         method: 'POST',
         body: beginForm
     }});
@@ -171,21 +190,34 @@ document.getElementById('{UploadButtonElement}').addEventListener('click', async
 
         const partForm = new FormData();
         partForm.append(""{Action}"", ""{UploadPartAction}"");
-        partForm.append(""{FilePartSequence}"", i + 1);
+        partForm.append(""{FilePartSequence}"", i);
         partForm.append(""{FilePartData}"", blob);
 
-        uploadPromises.push(fetch('/{UploadPartAction}', {{
+        uploadPromises.push(fetch('/', {{
             method: 'POST',
             body: partForm
         }}));
     }}
 
     const results = await Promise.all(uploadPromises);
+
     if (results.some(res => !res.ok)) {{
         alert(""Some parts failed to upload."");
         return;
     }}
 
+
+    const completeForm = document.createElement('form');
+    completeForm.method = 'POST';
+    completeForm.enctype = 'multipart/form-data';
+
+    const completeFormAction = document.createElement('input');
+    completeFormAction.type = 'hidden';
+    completeFormAction.name = ""{Action}"";
+    completeFormAction.value = ""{CompleteUploadAction}"";
+    completeForm.appendChild(completeFormAction);
+    document.body.appendChild(completeForm);
+    completeForm.submit();
 }});
 
 ";

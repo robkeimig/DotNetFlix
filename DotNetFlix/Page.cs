@@ -29,7 +29,9 @@ public abstract class Page
 
     public virtual bool IsDefault { get; }
 
-    public abstract Task ProcessHttpContext(HttpContext context, SqliteConnection sql, long sessionId);    
+    public abstract Task Get(HttpContext context, SqliteConnection sql, long sessionId);
+
+    public abstract Task Post(HttpContext context, SqliteConnection sql, long sessionId);    
 
     public static string HtmlTemplate(string html, string css, string js) => $@"
 <!DOCTYPE html>

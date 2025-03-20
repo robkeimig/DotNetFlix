@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Microsoft.AspNetCore;
+﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
@@ -60,23 +59,15 @@ internal class WebServer
         }
 
         var page = Page.Instance(session.Page);
-        await page.ProcessHttpContext(context, Sql, session.Id);
-        //if (context.Request.Method.Equals("post", StringComparison.CurrentCultureIgnoreCase))
-        //{
-        //    var form = await context.Request.ReadFormAsync();
-        //    var action = form.FirstOrDefault(x => x.Key == Page.Action).Value.ToString();
-
-        //    if (await page.Post(Sql, context, session.Id, form))
-        //    {
-        //        return;
-        //    }
-
-        //    session = Sql.GetSession(session.Id);
-        //    page = Page.Instance(session.Page);
-        //}
-
-        //var content = await page.Get(Sql, session.Id);
-        //await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(content), context.RequestAborted);
+        
+        if (context.Request.Method.Equals("post", StringComparison.CurrentCultureIgnoreCase))
+        {
+            await page.Post(context, Sql, session.Id);
+        }
+        else
+        {
+            await page.Get(context, Sql, session.Id);
+        }
     }
 }
 

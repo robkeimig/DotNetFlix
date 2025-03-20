@@ -11,27 +11,24 @@ internal class Home : Page
 
     public override bool IsDefault => true;
 
-    public override async Task ProcessHttpContext(HttpContext context, SqliteConnection sql, long sessionId)
+    public override async Task Get(HttpContext context, SqliteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
+        await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(View(sql, sessionId)), context.RequestAborted);
+    }
 
-        if (context.Request.Method.Equals("post", StringComparison.CurrentCultureIgnoreCase))
+    public override async Task Post(HttpContext context, SqliteConnection sql, long sessionId)
+    {
+        var form = await context.Request.ReadFormAsync();
+
+        switch (form[Action])
         {
-            var form = await context.Request.ReadFormAsync();
-            
-            switch (form[Action])
-            {
-                case UploadAction:
-                    sql.SetSessionPage(sessionId, nameof(Upload));
-                    await Instance(nameof(Upload)).ProcessHttpContext(context, sql, session.Id);
-                    break;
-                default:
-                    throw new NotImplementedException();
-            }
-        }
-        else
-        {
-            await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(View(sql, sessionId)), context.RequestAborted);
+            case UploadAction:
+                sql.SetSessionPage(sessionId, nameof(Upload));
+                await Instance(nameof(Upload)).Get(context, sql, sessionId);
+                break;
+            default:
+                throw new NotImplementedException();
         }
     }
 
