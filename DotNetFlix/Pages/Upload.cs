@@ -23,10 +23,17 @@ internal class Upload : Page
     const string UploadPartAction = "UploadPart";
     const string CompleteUploadAction = "CompleteUpload";
 
+    enum ViewMode
+    {
+        Default,
+        UploadComplete
+    }
+
     public override async Task Get(HttpContext context, SqliteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
-        var view = HtmlTemplate(Html(), Css(), Js());
+        _ = Enum.TryParse(sql.GetSessionData(sessionId, nameof(ViewMode)), out ViewMode viewMode);
+        var view = HtmlTemplate(Html(viewMode), Css(), Js(viewMode));
         await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(view), context.RequestAborted);
     }
 
@@ -80,11 +87,13 @@ internal class Upload : Page
                 }
             case CompleteUploadAction:
                 {
+                    sql.SetSessionData(sessionId, nameof(ViewMode), ViewMode.UploadComplete.ToString());
                     await Get(context, sql, sessionId);
                     break;
                 }
             case CancelAction:
                 {
+                    sql.ClearSessionData(sessionId);
                     sql.SetSessionPage(sessionId, nameof(Home));
                     await Instance(nameof(Home)).Get(context, sql, sessionId);
                     break;
@@ -94,15 +103,24 @@ internal class Upload : Page
         }
     }
 
-    string Html() => $@"
+    string Html(ViewMode viewMode) => $@"
 <form method=""POST"" enctype=""multipart/form-data"">
     <button type=""submit"" name=""{Action}"" value=""{CancelAction}"">Cancel</button>
 </form>
 
-<label for=""{FileInputElement}"">File:</label>
-<input type=""file"" id=""{FileInputElement}"">
-<br>
-<button id=""{UploadButtonElement}"">Upload</button>";
+{(viewMode == ViewMode.Default ? $@"
+    <label for=""{FileInputElement}"">File:</label>
+    <input type=""file"" id=""{FileInputElement}"">
+    <br>
+    <button id=""{UploadButtonElement}"">Upload</button>
+" : string.Empty)}
+
+{(viewMode == ViewMode.UploadComplete ? $@"
+    <p>TODO! Media info, transcoding settings & preview go here.</p>
+    <p>Once this is confirmed, we perform actual Media creation & upload to S3.</p>
+" : string.Empty)}
+
+";
 
     string Css() => $@"
 form {{
@@ -148,7 +166,9 @@ button:hover {{
     background: #0056b3;
 }}
 ";
-    string Js() => $@"
+    string Js(ViewMode viewMode) => $@"
+
+{(viewMode == ViewMode.Default ? $@"
 document.getElementById('{UploadButtonElement}').addEventListener('click', async function () {{
     const fileInput = document.getElementById('{FileInputElement}');
 
@@ -219,6 +239,8 @@ document.getElementById('{UploadButtonElement}').addEventListener('click', async
     document.body.appendChild(completeForm);
     completeForm.submit();
 }});
+" : string.Empty)}
+
 
 ";
 }
