@@ -1,6 +1,6 @@
-﻿using Dapper;
+﻿using System.Data.SQLite;
+using Dapper;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Data;
 
@@ -65,7 +65,7 @@ public static class SessionExtensions
         });
     }
 
-    internal static Session? GetSession(this SqliteConnection sql, string token)
+    internal static Session? GetSession(this SQLiteConnection sql, string token)
     {
         var sessionRow = sql.QueryFirstOrDefault<SessionsTable>($@"
             SELECT * 
@@ -81,7 +81,7 @@ public static class SessionExtensions
         return session;
     }
 
-    public static Session GetSession(this SqliteConnection sql, long id)
+    public static Session GetSession(this SQLiteConnection sql, long id)
     {
         var sessionRow = sql.QueryFirst<SessionsTable>($@"
             SELECT * 
@@ -97,7 +97,7 @@ public static class SessionExtensions
     }
 
 
-    public static Session CreateSession(this SqliteConnection sql)
+    public static Session CreateSession(this SQLiteConnection sql)
     {
         var session = new Session
         {
@@ -118,7 +118,7 @@ public static class SessionExtensions
         return session;
     }
 
-    public static void SetSessionPage(this SqliteConnection sql, long sessionId, string page)
+    public static void SetSessionPage(this SQLiteConnection sql, long sessionId, string page)
     {
         sql.Execute($@"
             UPDATE {SessionsTable.TableName}

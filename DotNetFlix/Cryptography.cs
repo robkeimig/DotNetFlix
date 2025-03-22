@@ -1,7 +1,7 @@
-﻿using System.Security.Cryptography;
+﻿using System.Data.SQLite;
+using System.Security.Cryptography;
 using Dapper;
 using DotNetFlix.Data;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix;
 
@@ -77,7 +77,7 @@ internal class Cryptography
 
 public static class CryptographyDataExtensions
 { 
-    public static void InitializeCryptography(this SqliteConnection sql, string systemPassword)
+    public static void InitializeCryptography(this SQLiteConnection sql, string systemPassword)
     {
         var masterEncryptionKey = Cryptography.GetBytes(systemPassword);
 

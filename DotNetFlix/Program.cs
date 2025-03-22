@@ -1,17 +1,17 @@
-﻿using System.Text.Json;
+﻿using System.Data.SQLite;
+using System.Text.Json;
 using DotNetFlix;
 using DotNetFlix.Data;
-using Microsoft.Data.Sqlite;
 
-if (!File.Exists($"{nameof(SystemPassword)}.json"))
+if (!System.IO.File.Exists($"{nameof(DotNetFlix.SystemPassword)}.json"))
 {
-    Console.WriteLine($"{nameof(SystemPassword)}.json file missing! It needs to be in the same directory as the executable.");
+    Console.WriteLine($"{nameof(DotNetFlix.SystemPassword)}.json file missing! It needs to be in the same directory as the executable.");
     return;
 }
 
-var systemPasswordJson = File.ReadAllText(nameof(SystemPassword)+".json");
+var systemPasswordJson = System.IO.File.ReadAllText(nameof(SystemPassword)+".json");
 var systemPassword = JsonSerializer.Deserialize<SystemPassword>(systemPasswordJson).Password;
-var sql = new SqliteConnection("Data Source = data.db");
+var sql = new SQLiteConnection("Data Source = data.db");
 
 sql.Open();
 sql.EnsureSchema();

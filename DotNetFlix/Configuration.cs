@@ -1,5 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
-using DotNetFlix.Data;
+﻿using DotNetFlix.Data;
+using System.Data.SQLite;
 
 namespace DotNetFlix;
 
@@ -14,7 +14,7 @@ public class Configuration
 
 public static class ConfigurationExtensions
 {
-    public static Configuration GetConfiguration(this SqliteConnection sql)
+    public static Configuration GetConfiguration(this SQLiteConnection sql)
     {
         var settings = sql.GetSettings();
 

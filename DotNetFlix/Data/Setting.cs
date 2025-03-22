@@ -1,6 +1,6 @@
-﻿using System.Security.Cryptography;
+﻿using System.Data.SQLite;
+using System.Security.Cryptography;
 using Dapper;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Data;
 
@@ -20,7 +20,7 @@ public class SettingsTable
 
 public static class SettingsExtensions
 {
-    public static void InitializeSettings(this SqliteConnection sql)
+    public static void InitializeSettings(this SQLiteConnection sql)
     {
         var properties = typeof(Configuration).GetProperties();
 
@@ -54,18 +54,18 @@ public static class SettingsExtensions
         }
     }
 
-    public static List<Setting> GetSettings(this SqliteConnection sql)
+    public static List<Setting> GetSettings(this SQLiteConnection sql)
     {
         var settings = sql.Query<SettingsTable>($@"SELECT * FROM {SettingsTable.TableName}");
         return Map(settings);
     }
 
-    public static Setting GetSetting(this SqliteConnection sql, string key)
+    public static Setting GetSetting(this SQLiteConnection sql, string key)
     {
         throw new NotImplementedException();
     }
 
-    public static void UpdateSetting(this SqliteConnection sql, string key, string value)
+    public static void UpdateSetting(this SQLiteConnection sql, string key, string value)
     {
         throw new NotImplementedException();
     }

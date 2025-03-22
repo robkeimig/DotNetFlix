@@ -1,6 +1,6 @@
-﻿using System.Reflection;
+﻿using System.Data.SQLite;
+using System.Reflection;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix;
 
@@ -29,9 +29,9 @@ public abstract class Page
 
     public virtual bool IsDefault { get; }
 
-    public abstract Task Get(HttpContext context, SqliteConnection sql, long sessionId);
+    public abstract Task Get(HttpContext context, SQLiteConnection sql, long sessionId);
 
-    public abstract Task Post(HttpContext context, SqliteConnection sql, long sessionId);    
+    public abstract Task Post(HttpContext context, SQLiteConnection sql, long sessionId);    
 
     public static string HtmlTemplate(string html, string css, string js) => $@"
 <!DOCTYPE html>
@@ -42,7 +42,6 @@ public abstract class Page
     
     <style>
         body, html {{
-            background-color:#000;
             margin: 0;
             height: 100%;
         }}

@@ -1,4 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
 
 namespace DotNetFlix.Data;
 
@@ -36,7 +36,7 @@ public class MoviesTable
 
 public static class MovieDataExtensions
 {
-    public static List<Movie> GetMovies(this SqliteConnection sql, long sessionId)
+    public static List<Movie> GetMovies(this SQLiteConnection sql, long sessionId)
     {
         return new List<Movie>()
         {

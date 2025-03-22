@@ -1,7 +1,7 @@
-﻿using System.Text;
+﻿using System.Data.SQLite;
+using System.Text;
 using DotNetFlix.Data;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Pages;
 
@@ -11,13 +11,13 @@ internal class Home : Page
 
     public override bool IsDefault => true;
 
-    public override async Task Get(HttpContext context, SqliteConnection sql, long sessionId)
+    public override async Task Get(HttpContext context, SQLiteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
         await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(View(sql, sessionId)), context.RequestAborted);
     }
 
-    public override async Task Post(HttpContext context, SqliteConnection sql, long sessionId)
+    public override async Task Post(HttpContext context, SQLiteConnection sql, long sessionId)
     {
         var form = await context.Request.ReadFormAsync();
 
@@ -32,7 +32,7 @@ internal class Home : Page
         }
     }
 
-    string View(SqliteConnection sql, long sessionId)
+    string View(SQLiteConnection sql, long sessionId)
     {
         var movies = sql.GetMovies(sessionId);
         return HtmlTemplate(Html(movies), Css(), Js());

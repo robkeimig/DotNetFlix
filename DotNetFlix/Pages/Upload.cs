@@ -1,13 +1,14 @@
-﻿using System.Text;
+﻿using System.Data.SQLite;
+using System.Text;
 using System.Text.Json;
 using DotNetFlix.Data;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Pages;
 
 internal class Upload : Page
 {
+    private const string FileUploadIdKey = "FileUploadId";
     const string UploadFileNameKey = "UploadFileName";
 
     const int UploadPartSize = 1024 * 1024 * 5;
@@ -29,15 +30,24 @@ internal class Upload : Page
         UploadComplete
     }
 
-    public override async Task Get(HttpContext context, SqliteConnection sql, long sessionId)
+    public override async Task Get(HttpContext context, SQLiteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
         _ = Enum.TryParse(sql.GetSessionData(sessionId, nameof(ViewMode)), out ViewMode viewMode);
-        var view = HtmlTemplate(Html(viewMode), Css(), Js(viewMode));
+        FileUpload? fileUpload = default;
+
+        if (viewMode == ViewMode.UploadComplete)
+        {
+            var fileUploadIdString = sql.GetSessionData(sessionId, FileUploadIdKey);
+            var fileUploadId = long.Parse(fileUploadIdString);
+            fileUpload = sql.GetFileUpload(fileUploadId);
+        }
+
+        var view = HtmlTemplate(Html(viewMode, fileUpload), Css(), Js(viewMode));
         await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(view), context.RequestAborted);
     }
 
-    public override async Task Post(HttpContext context, SqliteConnection sql, long sessionId)
+    public override async Task Post(HttpContext context, SQLiteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
         var form = await context.Request.ReadFormAsync();
@@ -62,8 +72,8 @@ internal class Upload : Page
                         totalParts = totalParts
                     });
 
-                    var uploadFileName = Guid.NewGuid().ToString("N") + new FileInfo(fileName).Extension;
-                    sql.SetSessionData(sessionId, UploadFileNameKey, uploadFileName);
+                    var file = sql.CreateFileUpload(sessionId, fileName, fileSize);
+                    sql.SetSessionData(sessionId, FileUploadIdKey, file.Id.ToString());
                     context.Response.ContentType = "application/json";
                     await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(beginUploadResponseJson), context.RequestAborted);
                     break;
@@ -73,13 +83,17 @@ internal class Upload : Page
                     var filePartSequenceString = form[FilePartSequence];
                     var file = form.Files[0];
                     
+
                     if (!long.TryParse(filePartSequenceString, out long filePartSequence))
                     {
                         throw new ArgumentException();
                     }
 
-                    var uploadFileName = sql.GetSessionData(sessionId, UploadFileNameKey);
-                    using var fileStream = new FileStream(uploadFileName, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write, 4096, true);
+                    var fileUploadIdString = sql.GetSessionData(sessionId, FileUploadIdKey);
+                    var fileUploadId = long.Parse(fileUploadIdString);
+                    var fileUpload = sql.GetFileUpload(fileUploadId);
+                    var extension = new FileInfo(fileUpload.Name).Extension;
+                    using var fileStream = new FileStream(fileUploadId+extension, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write, 4096, true);
                     fileStream.Seek(filePartSequence * UploadPartSize, SeekOrigin.Begin);
                     await file.CopyToAsync(fileStream);
                     Console.WriteLine(filePartSequence);
@@ -88,6 +102,9 @@ internal class Upload : Page
             case CompleteUploadAction:
                 {
                     sql.SetSessionData(sessionId, nameof(ViewMode), ViewMode.UploadComplete.ToString());
+                    var fileUploadIdString = sql.GetSessionData(sessionId, FileUploadIdKey);
+                    var fileUploadId = long.Parse(fileUploadIdString);
+                    sql.SetFileUploadCompleted(fileUploadId);
                     await Get(context, sql, sessionId);
                     break;
                 }
@@ -103,7 +120,7 @@ internal class Upload : Page
         }
     }
 
-    string Html(ViewMode viewMode) => $@"
+    string Html(ViewMode viewMode, FileUpload? fileUpload) => $@"
 <form method=""POST"" enctype=""multipart/form-data"">
     <button type=""submit"" name=""{Action}"" value=""{CancelAction}"">Cancel</button>
 </form>
@@ -116,8 +133,25 @@ internal class Upload : Page
 " : string.Empty)}
 
 {(viewMode == ViewMode.UploadComplete ? $@"
-    <p>TODO! Media info, transcoding settings & preview go here.</p>
-    <p>Once this is confirmed, we perform actual Media creation & upload to S3.</p>
+    <h1>Uploaded File Information</h1>
+    <table>
+        <tr>
+            <td><b>File Name</b></td>
+            <td>{fileUpload.Name}</td>
+        </tr>
+        <tr>
+            <td><b>File Size</b></td>
+            <td>{fileUpload.Size}</td>
+        </tr>
+        <tr>
+            <td><b>Upload Time</b></td>
+            <td>{(fileUpload.UploadCompletedUtc.Value - fileUpload.CreatedUtc).TotalSeconds} seconds</td>
+        </tr>
+    </table>
+    <h1>Transcoding settings</h1>
+    <p>TODO: ffmpeg arguments textarea with 2x interpolation variables for the input/output file names.</p>
+    <p>TODO: Button to generate a transcoded sample and download it for preview. Input for timestamp offset in seconds.</p>
+    <p>TODO: Once ffmpeg args are confirmed, we perform actual Media creation & upload to S3.</p>
 " : string.Empty)}
 
 ";

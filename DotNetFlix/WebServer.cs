@@ -4,25 +4,25 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Data.Sqlite;
 using DotNetFlix.Data;
 using DotNetFlix.Pages;
 using Microsoft.AspNetCore.Http.Features;
+using System.Data.SQLite;
 
 namespace DotNetFlix;
 
 internal class WebServer
 {
-    readonly SqliteConnection Sql;
+    readonly SQLiteConnection Sql;
 
-    public WebServer(SqliteConnection sql)
+    public WebServer(SQLiteConnection sql)
     {
         Sql = sql;
 
         WebHost.CreateDefaultBuilder()
             .UseKestrel(k =>
             {
-                k.ListenAnyIP(8001);
+                k.ListenAnyIP(80);
             })
             .UseStartup<WebStartup>()
             .ConfigureLogging(cl =>

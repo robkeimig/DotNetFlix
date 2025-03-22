@@ -1,5 +1,5 @@
-﻿using Dapper;
-using Microsoft.Data.Sqlite;
+﻿using System.Data.SQLite;
+using Dapper;
 
 namespace DotNetFlix.Data;
 
@@ -23,7 +23,7 @@ public class SessionDataTable
 
 public static class SessionDataDataExtensions
 {
-    public static string? GetSessionData(this SqliteConnection sql, long sessionId, string key)
+    public static string? GetSessionData(this SQLiteConnection sql, long sessionId, string key)
     {
         return sql.ExecuteScalar<string>($@"
             SELECT [{nameof(SessionDataTable.Value)}]
@@ -36,7 +36,7 @@ public static class SessionDataDataExtensions
         });
     }
 
-    public static void ClearSessionData(this SqliteConnection sql, long sessionId)
+    public static void ClearSessionData(this SQLiteConnection sql, long sessionId)
     {
         sql.Execute($@"DELETE FROM {SessionDataTable.TableName} WHERE [{nameof(SessionDataTable.SessionId)}] = @{nameof(SessionDataTable.SessionId)}", new
         {
@@ -44,12 +44,12 @@ public static class SessionDataDataExtensions
         });
     }
 
-    public static void ClearSessionData(this SqliteConnection sql, long sessionId, string key)
+    public static void ClearSessionData(this SQLiteConnection sql, long sessionId, string key)
     {
         throw new NotImplementedException();
     }
 
-    public static void SetSessionData(this SqliteConnection sql, long sessionId, string key, string value)
+    public static void SetSessionData(this SQLiteConnection sql, long sessionId, string key, string value)
     {
         var existing = sql.QueryFirstOrDefault<SessionDataTable>($@"
             SELECT * FROM {SessionDataTable.TableName}

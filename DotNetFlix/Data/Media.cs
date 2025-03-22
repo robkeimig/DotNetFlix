@@ -1,10 +1,10 @@
-﻿using System.Diagnostics;
+﻿using System.Data.SQLite;
+using System.Diagnostics;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Transfer;
 using Dapper;
-using Microsoft.Data.Sqlite;
 
 namespace DotNetFlix.Data;
 
@@ -31,7 +31,7 @@ public class MediaTable
 
 public static class MediaExtensions
 {
-    public static void WarmupMedia(this SqliteConnection sql, long mediaId)
+    public static void WarmupMedia(this SQLiteConnection sql, long mediaId)
     {
         //TODO: 
         //0. Check if IsPending=1 and skip item 2/3/4 if it is. 
@@ -42,7 +42,7 @@ public static class MediaExtensions
         //5. Return to caller. Ideally this whole process completes synchronously under ~3 seconds.
     }
 
-    public static Media CreateMedia(this SqliteConnection sql, string uploadedFile, string title)
+    public static Media CreateMedia(this SQLiteConnection sql, string uploadedFile, string title)
     {
         var configuration = sql.GetConfiguration();
         var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
@@ -76,11 +76,11 @@ public static class MediaExtensions
 
         fileTransferUtility.Upload(uploadRequest);
 
-        File.Delete(uploadedFile);
-        File.Delete(contentFile);
-        File.Delete(contentPreloadFile);
-        File.Delete(encryptedContentFile);
-        File.Delete(encryptedContentPreloadFile);
+        System.IO.File.Delete(uploadedFile);
+        System.IO.File.Delete(contentFile);
+        System.IO.File.Delete(contentPreloadFile);
+        System.IO.File.Delete(encryptedContentFile);
+        System.IO.File.Delete(encryptedContentPreloadFile);
 
         var media = new Media
         {
