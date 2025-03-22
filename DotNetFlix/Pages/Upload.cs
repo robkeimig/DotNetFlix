@@ -127,81 +127,44 @@ internal class Upload : Page
     <button type=""submit"" name=""{Action}"" value=""{CancelAction}"">Cancel</button>
 </form>
 
-{(viewMode == ViewMode.Default ? $@"
-    <label for=""{FileInputElement}"">File:</label>
-    <input type=""file"" id=""{FileInputElement}"">
-    <br>
-    <button id=""{UploadButtonElement}"">Upload</button>
-    <div id=""{UploadProgressElement}""></div>
-    <div id=""{UploadPartsElement}""></div>
-" : string.Empty)}
+<div id='content'>
+    {(viewMode == ViewMode.Default ? $@"
+        <label for=""{FileInputElement}"">File:</label>
+        <input type=""file"" id=""{FileInputElement}"">
+        <br><br>
+        <button id=""{UploadButtonElement}"">Upload</button>
+        <div id=""{UploadProgressElement}""></div>
+        <div id=""{UploadPartsElement}""></div>
+    " : string.Empty)}
 
-{(viewMode == ViewMode.UploadComplete ? $@"
-    <h1>Uploaded File Information</h1>
-    <table>
-        <tr>
-            <td><b>File Name</b></td>
-            <td>{fileUpload.Name}</td>
-        </tr>
-        <tr>
-            <td><b>File Size</b></td>
-            <td>{fileUpload.Size}</td>
-        </tr>
-        <tr>
-            <td><b>Upload Time</b></td>
-            <td>{(fileUpload.UploadCompletedUtc.Value - fileUpload.CreatedUtc).TotalSeconds} seconds</td>
-        </tr>
-    </table>
-    <h1>Transcoding settings</h1>
-    <p>TODO: ffmpeg arguments textarea with 2x interpolation variables for the input/output file names.</p>
-    <p>TODO: Button to generate a transcoded sample and download it for preview. Input for timestamp offset in seconds.</p>
-    <p>TODO: Once ffmpeg args are confirmed, we perform actual Media creation & upload to S3.</p>
-" : string.Empty)}
-
+    {(viewMode == ViewMode.UploadComplete ? $@"
+        <h1>Uploaded File Information</h1>
+        <table>
+            <tr>
+                <td><b>File Name</b></td>
+                <td>{fileUpload.Name}</td>
+            </tr>
+            <tr>
+                <td><b>File Size</b></td>
+                <td>{fileUpload.Size}</td>
+            </tr>
+            <tr>
+                <td><b>Upload Time</b></td>
+                <td>{(fileUpload.UploadCompletedUtc.Value - fileUpload.CreatedUtc).TotalSeconds} seconds</td>
+            </tr>
+        </table>
+        <h1>Transcoding settings</h1>
+        <p>TODO: ffmpeg arguments textarea with 2x interpolation variables for the input/output file names.</p>
+        <p>TODO: Button to generate a transcoded sample and download it for preview. Input for timestamp offset in seconds.</p>
+        <p>TODO: Once ffmpeg args are confirmed, we perform actual Media creation & upload to S3.</p>
+    " : string.Empty)}
+</div>
 ";
 
     string Css() => $@"
-form {{
-    max-width: 400px;
-    margin: 20px auto;
-    padding: 20px;
-    background: #f8f9fa;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    font-family: Arial, sans-serif;
-    box-sizing: border-box;
-}}
-
-label {{
-    font-weight: bold;
-    display: block;
-    margin: 10px 0 5px;
-}}
-
-select,
-input[type=""text""],
-input[type=""file""],
-button {{
-    width: 100%;
-    padding: 10px;
-    margin-top: 5px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    box-sizing: border-box; /* Prevents overflow */
-}}
-
-button {{
-    background: #007bff;
-    color: white;
-    font-weight: bold;
-    border: none;
-    cursor: pointer;
-    margin-top: 15px;
-    transition: background 0.2s;
-}}
-
-button:hover {{
-    background: #0056b3;
+#content {{
+    border: 1px solid #000;
+    padding: 1rem;
 }}
 ";
     string Js(ViewMode viewMode) => $@"

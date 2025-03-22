@@ -65,7 +65,6 @@ internal class Home : Page
 
     string Css() =>@$"
 .container {{
-    background-color:#ff00ff;
 }}
 
 .container p {{
