@@ -19,6 +19,8 @@ internal class Upload : Page
     const string FilePartSequence = "FilePartSequence";
     const string FilePartData = "FilePartData";
     const string UploadButtonElement = "UploadButton";
+    const string UploadPartsElement = "UploadParts";
+    const string UploadProgressElement = "UploadProgress";
     const string CancelAction = "Cancel";
     const string BeginUploadAction = "BeginUpload";
     const string UploadPartAction = "UploadPart";
@@ -130,6 +132,8 @@ internal class Upload : Page
     <input type=""file"" id=""{FileInputElement}"">
     <br>
     <button id=""{UploadButtonElement}"">Upload</button>
+    <div id=""{UploadProgressElement}""></div>
+    <div id=""{UploadPartsElement}""></div>
 " : string.Empty)}
 
 {(viewMode == ViewMode.UploadComplete ? $@"
@@ -234,9 +238,23 @@ document.getElementById('{UploadButtonElement}').addEventListener('click', async
 
     console.log(partSize);
     console.log(totalParts);
-    
-    // Step 2: Upload parts in parallel
+   
+    const uploadPartsContainer = document.getElementById('{UploadPartsElement}');
+    const uploadProgressContainer = document.getElementById('{UploadProgressElement}');
+    uploadPartsContainer.innerHTML = ''; // Clear previous statuses
+
+    // Create the main progress bar
+    const progressBarContainer = document.createElement('div');
+    const progressBar = document.createElement('progress');
+    progressBar.max = totalParts; // Total number of parts
+    progressBar.value = 0; // Initial progress is 0
+    progressBar.style.width = '100%'; // Full width
+    uploadProgressContainer.appendChild(progressBar);
+
     const uploadPromises = [];
+    const statusElements = new Map(); // Store references to status elements
+    let completedParts = 0; // Track completed parts
+
     for (let i = 0; i < totalParts; i++) {{
         const start = i * partSize;
         const end = Math.min(start + partSize, file.size);
@@ -247,20 +265,43 @@ document.getElementById('{UploadButtonElement}').addEventListener('click', async
         partForm.append(""{FilePartSequence}"", i);
         partForm.append(""{FilePartData}"", blob);
 
-        uploadPromises.push(fetch('/', {{
+         // Create status element
+            const statusElement = document.createElement('div');
+            statusElement.id = `part-${{i}}`;
+            statusElement.textContent = `Part ${{i+1}}: Uploading...`;
+            uploadPartsContainer.appendChild(statusElement);
+            statusElements.set(i, statusElement);
+
+        // Upload part and update status
+        const uploadPromise = fetch('/', {{
             method: 'POST',
             body: partForm
-        }}));
+        }}).then(response => {{
+            if (response.ok) {{
+                statusElement.textContent = `Part ${{i + 1}}: Uploaded ✅`;
+                uploadPartsContainer.prepend(statusElement);
+                completedParts++;
+                progressBar.value = completedParts;
+                setTimeout(() => {{ // Remove after 1 second
+                    statusElement.remove();
+                    statusElements.delete(i);
+                }}, 1000);
+            }} else {{
+                statusElement.textContent = `Part ${{i + 1}}: Failed ❌`;
+            }}
+        }}).catch(() => {{
+            statusElement.textContent = `Part ${{i + 1}}: Failed ❌`;
+        }});
+
+        uploadPromises.push(uploadPromise);
+    }}
+
+    // Function to move completed items to the top
+    function moveToTop(element) {{
+        uploadPartsContainer.prepend(element);
     }}
 
     const results = await Promise.all(uploadPromises);
-
-    if (results.some(res => !res.ok)) {{
-        alert(""Some parts failed to upload."");
-        return;
-    }}
-
-
     const completeForm = document.createElement('form');
     completeForm.method = 'POST';
     completeForm.enctype = 'multipart/form-data';

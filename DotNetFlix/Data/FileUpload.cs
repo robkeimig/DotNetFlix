@@ -51,13 +51,15 @@ public static class FileDataExtensions
             (
                 [{nameof(FileUploadsTable.SessionId)}],
                 [{nameof(FileUploadsTable.Name)}],
-                [{nameof(FileUploadsTable.Size)}]
+                [{nameof(FileUploadsTable.Size)}],
+                [{nameof(FileUploadsTable.CreatedUnixTimestamp)}]
             )
             VALUES
             (
                 @{nameof(FileUploadsTable.SessionId)},
                 @{nameof(FileUploadsTable.Name)},
-                @{nameof(FileUploadsTable.Size)}
+                @{nameof(FileUploadsTable.Size)},
+                @{nameof(FileUploadsTable.CreatedUnixTimestamp)}
             )
             RETURNING [{nameof(FileUploadsTable.Id)}]", Map(file));
 
