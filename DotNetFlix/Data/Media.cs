@@ -55,10 +55,9 @@ public static class MediaDataExtensions
         var encryptedContentPreloadFile = contentPreloadFile + ".enc";
         var encryptionKey = Cryptography.GetBytes();
 
-        //TODO: Eventually this should run async as something like a MediaCreationJob we can review from UI.
-
-        MediaExtensions.TranscodeToH264(uploadedFile, contentFile);
-        MediaExtensions.TranscodeToH264(uploadedFile, contentPreloadFile, clipLengthSeconds: 60);
+        var contentStatus = MediaExtensions.TranscodeToH264(uploadedFile, contentFile);
+        var preloadStatus = MediaExtensions.TranscodeToH264(uploadedFile, contentPreloadFile, clipLengthSeconds: 60);
+        while (!contentStatus.Complete || !preloadStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
 
         Cryptography.EncryptFile(contentFile, encryptedContentFile, encryptionKey);
         Cryptography.EncryptFile(contentPreloadFile, encryptedContentPreloadFile, encryptionKey);

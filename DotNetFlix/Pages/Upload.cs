@@ -123,8 +123,9 @@ internal class Upload : Page
                     var fileUpload = sql.GetFileUpload(fileUploadId);
                     var previewFileName = Guid.NewGuid().ToString("N") + ".mp4";
                     var extension = new FileInfo(fileUpload.Name).Extension;
-                    var fileName = fileUploadId + extension;
-                    MediaExtensions.TranscodeToH264(fileName, previewFileName, 30);
+                    var fileName = fileUploadId + extension;                    
+                    var previewStatus = MediaExtensions.TranscodeToH264(fileName, previewFileName, 30);
+                    while (!previewStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
                     sql.SetSessionData(sessionId, PreviewFileNameKey, previewFileName);
                     await Get(context, sql, sessionId);
                     break;
@@ -151,7 +152,8 @@ internal class Upload : Page
                     var fileUpload = sql.GetFileUpload(fileUploadId);
                     var extension = new FileInfo(fileUpload.Name).Extension;
                     var fileName = fileUploadId + extension;
-                    MediaExtensions.TranscodeToH264(fileName, previewFileName, 30, startTimeSeconds);
+                    var previewStatus = MediaExtensions.TranscodeToH264(fileName, previewFileName, 30, startTimeSeconds);
+                    while (!previewStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
                     sql.SetSessionData(sessionId, PreviewFileNameKey, previewFileName);
                     await Get(context, sql, sessionId);
                     break;
