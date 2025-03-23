@@ -25,6 +25,8 @@ internal class Upload : Page
     const string BeginUploadAction = "BeginUpload";
     const string UploadPartAction = "UploadPart";
     const string CompleteUploadAction = "CompleteUpload";
+    const string GeneratePreviewAction = "GeneratePreview";
+    const string ConfirmAction = "Confirm";
 
     enum ViewMode
     {
@@ -153,10 +155,25 @@ internal class Upload : Page
                 <td>{(fileUpload.UploadCompletedUtc.Value - fileUpload.CreatedUtc).TotalSeconds} seconds</td>
             </tr>
         </table>
+<form method=""POST"" enctype=""multipart/form-data"">
+        <h1>Media Information</h1>
+        <b>Title</b>
+        <input type='text' style='width:50%'/>
         <h1>Transcoding settings</h1>
-        <p>TODO: ffmpeg arguments textarea with 2x interpolation variables for the input/output file names.</p>
-        <p>TODO: Button to generate a transcoded sample and download it for preview. Input for timestamp offset in seconds.</p>
-        <p>TODO: Once ffmpeg args are confirmed, we perform actual Media creation & upload to S3.</p>
+        <b>FFMPEG - Constant Rate Factor (CRF)</b>
+        <input type='text' value='18'>
+        <h2>Preview</h2>
+        <p>Generate a 30 second preview that demonstrates the selected FFMPEG arguments.</p>
+        <b>Start Time (seconds)</b>
+        <input type='text' value='0'>
+        <button type='submit' name='{Action}' value='{GeneratePreviewAction}'>Generate Preview</button>       
+        <br>
+        <video src='/'></video>
+        <br>
+        <h2>Confirmation</h2>
+        <p>After clicking <b>Confirm</b>, the ...
+        <button type='submit' name='{Action}' value='{ConfirmAction}'>Confirm</button>       
+</form>
     " : string.Empty)}
 </div>
 ";
@@ -165,6 +182,7 @@ internal class Upload : Page
 #content {{
     border: 1px solid #000;
     padding: 1rem;
+    margin: 1rem;
 }}
 ";
     string Js(ViewMode viewMode) => $@"
