@@ -63,7 +63,7 @@ public static class SessionDataDataExtensions
         if (existing == null)
         {
             sql.Execute($@"
-            INSERT OR REPLACE INTO [{SessionDataTable.TableName}]
+            INSERT INTO [{SessionDataTable.TableName}]
             (
                 [{nameof(SessionDataTable.SessionId)}],
                 [{nameof(SessionDataTable.Key)}]

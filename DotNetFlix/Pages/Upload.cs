@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using DotNetFlix.Data;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace DotNetFlix.Pages;
 
@@ -10,10 +11,12 @@ internal class Upload : Page
 {
     private const string FileUploadIdKey = "FileUploadId";
     const string UploadFileNameKey = "UploadFileName";
+    const string PreviewFileNameKey = "PreviewFileName";
 
     const int UploadPartSize = 1024 * 1024 * 5;
 
     const string FileInputElement = "File";
+    const string StartTimeSecondsElement = "StartTimeSeconds";
     const string FileName = "FileName";
     const string FileSize = "FileSize";
     const string FilePartSequence = "FilePartSequence";
@@ -26,7 +29,7 @@ internal class Upload : Page
     const string UploadPartAction = "UploadPart";
     const string CompleteUploadAction = "CompleteUpload";
     const string GeneratePreviewAction = "GeneratePreview";
-    const string ConfirmAction = "Confirm";
+    const string CreateAction = "Confirm";
 
     enum ViewMode
     {
@@ -37,6 +40,34 @@ internal class Upload : Page
     public override async Task Get(HttpContext context, SQLiteConnection sql, long sessionId)
     {
         var session = sql.GetSession(sessionId);
+
+        if (context.Request.Path.StartsWithSegments("/Preview"))
+        {
+            var previewFileName = sql.GetSessionData(sessionId, PreviewFileNameKey);
+
+            if (!System.IO.File.Exists(previewFileName))
+            {
+                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                return;
+            }
+
+            var fileInfo = new FileInfo(previewFileName);
+
+            await context.Response.SendFileAsync(previewFileName);  //Can we support seeking here?
+            return;
+            //// The method to return the file
+            //var fileResult = new FileStreamResult(new FileStream(previewFileName, FileMode.Open, FileAccess.Read, FileShare.Read), "video/mp4")
+            //{
+            //    FileDownloadName = Path.GetFileName(previewFileName)
+            //};
+
+            //// Ensure ASP.NET Core handles range requests and other headers automatically
+            //fileResult.EnableRangeProcessing = true;
+
+            //// You can return the file directly to the response
+            //await fileResult.ExecuteResultAsync(context);
+        }
+
         _ = Enum.TryParse(sql.GetSessionData(sessionId, nameof(ViewMode)), out ViewMode viewMode);
         FileUpload? fileUpload = default;
 
@@ -119,6 +150,26 @@ internal class Upload : Page
                     await Instance(nameof(Home)).Get(context, sql, sessionId);
                     break;
                 }
+            case GeneratePreviewAction:
+                {
+                    var startTimeSecondsString = form[StartTimeSecondsElement];
+
+                    if (!int.TryParse(startTimeSecondsString, out int startTimeSeconds))
+                    {
+                        throw new Exception("Cannot parse star time.");
+                    }
+
+                    var previewFileName = Guid.NewGuid().ToString("N") + ".mp4";
+                    var fileUploadIdString = sql.GetSessionData(sessionId, FileUploadIdKey);
+                    var fileUploadId = long.Parse(fileUploadIdString);
+                    var fileUpload = sql.GetFileUpload(fileUploadId);
+                    var extension = new FileInfo(fileUpload.Name).Extension;
+                    var fileName = fileUploadId + extension;
+                    MediaExtensions.TranscodeToH264(fileName, previewFileName, 30, startTimeSeconds);
+                    sql.SetSessionData(sessionId, PreviewFileNameKey, previewFileName);
+                    await Get(context, sql, sessionId);
+                    break;
+                }
             default:
                 throw new NotImplementedException();
         }
@@ -159,20 +210,28 @@ internal class Upload : Page
         <h1>Media Information</h1>
         <b>Title</b>
         <input type='text' style='width:50%'/>
-        <h1>Transcoding settings</h1>
-        <b>FFMPEG - Constant Rate Factor (CRF)</b>
-        <input type='text' value='18'>
-        <h2>Preview</h2>
-        <p>Generate a 30 second preview that demonstrates the selected FFMPEG arguments.</p>
+        <h1>Transcoding</h1>
+        <p>Transcoding is always applied to standardize media for a guaranteed playback experience.</p>
+        <p>You may adjust the below settings to better fit the content:</p>
+        <table>
+            <tr>
+                <td><b>FFmpeg - Constant Rate Factor (CRF)</b></td>
+                <td><input type='text' value='18'></td>
+            </tr>
+            <tr>
+                <td><b>FFmpeg - Audio Bitrate (kbps)</b></td>
+                <td><input type='text' value='192'></td>
+            </tr>
+        </table>
+        <h1>Preview</h1>
+        <p>Generate a 30 second preview that demonstrates the selected transcoding settings.</p>
         <b>Start Time (seconds)</b>
-        <input type='text' value='0'>
-        <button type='submit' name='{Action}' value='{GeneratePreviewAction}'>Generate Preview</button>       
+        <input type='text' name='{StartTimeSecondsElement}' value='0'>
+        <button type='submit' name='{Action}' value='{GeneratePreviewAction}'>Preview</button>       
         <br>
-        <video src='/'></video>
+        <video src='/Preview' controls autoplay muted loop></video>
         <br>
-        <h2>Confirmation</h2>
-        <p>After clicking <b>Confirm</b>, the ...
-        <button type='submit' name='{Action}' value='{ConfirmAction}'>Confirm</button>       
+        <button type='submit' name='{Action}' value='{CreateAction}'>Create</button>       
 </form>
     " : string.Empty)}
 </div>
@@ -184,6 +243,12 @@ internal class Upload : Page
     padding: 1rem;
     margin: 1rem;
 }}
+
+ video {{
+    width: 100%; 
+    height: auto;
+    display: block;
+  }}
 ";
     string Js(ViewMode viewMode) => $@"
 

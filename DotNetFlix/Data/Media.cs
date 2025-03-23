@@ -94,14 +94,15 @@ public static class MediaExtensions
         return media;
     }
 
-    static void TranscodeToH264(string inputPath, string outputPath, int? clipLengthSeconds = null)
+    public static void TranscodeToH264(string inputPath, string outputPath, int? clipLengthSeconds = null, int? startTimeSeconds = 0, int? audioBitRate = 192, int constantRateFactor = 22)
     {
         string durationArg = clipLengthSeconds.HasValue ? $"-t {clipLengthSeconds.Value}" : string.Empty;
 
         ProcessStartInfo startInfo = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-i \"{inputPath}\" {durationArg} -c:v libx264 -preset slow -crf 27 -c:a aac -b:a 192k -movflags +faststart \"{outputPath}\"",
+            //TODO: ENhance the below with support for a "startTimeSeconds" argument.
+            Arguments = $"-ss {startTimeSeconds} -i \"{inputPath}\" {durationArg} -c:v libx264 -preset slow -crf {constantRateFactor} -c:a aac -b:a {audioBitRate}k -movflags +faststart \"{outputPath}\"",
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
