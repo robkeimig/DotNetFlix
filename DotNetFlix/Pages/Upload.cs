@@ -142,7 +142,7 @@ internal class Upload : Page
 
                     if (!int.TryParse(startTimeSecondsString, out int startTimeSeconds))
                     {
-                        throw new Exception("Cannot parse star time.");
+                        throw new Exception("Cannot parse start time.");
                     }
 
                     var previewFileName = Guid.NewGuid().ToString("N") + ".mp4";
@@ -154,6 +154,19 @@ internal class Upload : Page
                     MediaExtensions.TranscodeToH264(fileName, previewFileName, 30, startTimeSeconds);
                     sql.SetSessionData(sessionId, PreviewFileNameKey, previewFileName);
                     await Get(context, sql, sessionId);
+                    break;
+                }
+            case CreateAction:
+                {
+                    var fileUploadIdString = sql.GetSessionData(sessionId, FileUploadIdKey);
+                    var fileUploadId = long.Parse(fileUploadIdString);
+                    var fileUpload = sql.GetFileUpload(fileUploadId);
+                    var extension = new FileInfo(fileUpload.Name).Extension;
+                    var fileName = fileUploadId + extension;
+                    sql.CreateMedia(fileName, "test");
+                    sql.ClearSessionData(sessionId);
+                    sql.SetSessionPage(sessionId, nameof(Home));
+                    await Instance(nameof(Home)).Get(context, sql, sessionId);
                     break;
                 }
             default:
