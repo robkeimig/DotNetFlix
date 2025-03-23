@@ -62,12 +62,27 @@ public static class SettingsExtensions
 
     public static Setting GetSetting(this SQLiteConnection sql, string key)
     {
-        throw new NotImplementedException();
+        var result = sql.QueryFirst<SettingsTable>($@"
+            SELECT [{nameof(SettingsTable.Value)}] 
+            FROM {SettingsTable.TableName}
+            WHERE [{nameof(SettingsTable.Key)}] = @{nameof(SettingsTable.Key)}", new
+        {
+            Key = key
+        });
+
+        return Map(result);
     }
 
     public static void UpdateSetting(this SQLiteConnection sql, string key, string value)
     {
-        throw new NotImplementedException();
+        sql.Execute($@"
+            UPDATE {SettingsTable.TableName}
+            SET     [{nameof(SettingsTable.Value)}] = @{nameof(SettingsTable.Value)}
+            WHERE   [{nameof(SettingsTable.Key)}] = @{nameof(SettingsTable.Key)}", new
+        {
+            Key = key,
+            Value = value
+        });
     }
 
     public static Setting Map(SettingsTable setting) => new Setting

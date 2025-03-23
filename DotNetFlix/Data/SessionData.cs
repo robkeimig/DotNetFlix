@@ -46,7 +46,15 @@ public static class SessionDataDataExtensions
 
     public static void ClearSessionData(this SQLiteConnection sql, long sessionId, string key)
     {
-        throw new NotImplementedException();
+        sql.Execute($@"
+            DELETE 
+            FROM {SessionDataTable.TableName} 
+            WHERE   [{nameof(SessionDataTable.SessionId)}] = @{nameof(SessionDataTable.SessionId)}
+            AND     [{nameof(SessionDataTable.Key)}] = @{nameof(SessionDataTable.Key)}", new
+        {
+            SessionId = sessionId,
+            Key = key
+        });
     }
 
     public static void SetSessionData(this SQLiteConnection sql, long sessionId, string key, string value)

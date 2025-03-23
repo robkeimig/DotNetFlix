@@ -8,7 +8,7 @@ namespace DotNetFlix.Pages;
 internal class Home : Page
 {
     public const string UploadAction = "Upload";
-
+    public const string SettingsAction = "Settings";
     public override bool IsDefault => true;
 
     public override async Task Get(HttpContext context, SQLiteConnection sql, long sessionId)
@@ -27,6 +27,10 @@ internal class Home : Page
                 sql.SetSessionPage(sessionId, nameof(Upload));
                 await Instance(nameof(Upload)).Get(context, sql, sessionId);
                 break;
+            case SettingsAction:
+                sql.SetSessionPage(sessionId, nameof(Settings));
+                await Instance(nameof(Settings)).Get(context, sql, sessionId);
+                break;
             default:
                 throw new NotImplementedException();
         }
@@ -42,6 +46,7 @@ internal class Home : Page
 <div class='container' />
     <form action='/' method='POST' enctype='multipart/data'>
         <button type='submit' name='{Action}' value='{UploadAction}'>Upload Media</button>
+        <button type='submit' name='{Action}' value='{SettingsAction}'>Settings</button>
     </form>
     <h1>Movies</h1>
     <table>
