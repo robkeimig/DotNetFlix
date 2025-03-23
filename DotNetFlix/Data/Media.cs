@@ -1,5 +1,4 @@
 ﻿using System.Data.SQLite;
-using System.Diagnostics;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
@@ -29,7 +28,7 @@ public class MediaTable
     public bool IsPending { get; set; }
 }
 
-public static class MediaExtensions
+public static class MediaDataExtensions
 {
     public static void WarmupMedia(this SQLiteConnection sql, long mediaId)
     {
@@ -58,8 +57,8 @@ public static class MediaExtensions
 
         //TODO: Eventually this should run async as something like a MediaCreationJob we can review from UI.
 
-        TranscodeToH264(uploadedFile, contentFile);
-        TranscodeToH264(uploadedFile, contentPreloadFile, clipLengthSeconds: 60);
+        MediaExtensions.TranscodeToH264(uploadedFile, contentFile);
+        MediaExtensions.TranscodeToH264(uploadedFile, contentPreloadFile, clipLengthSeconds: 60);
 
         Cryptography.EncryptFile(contentFile, encryptedContentFile, encryptionKey);
         Cryptography.EncryptFile(contentPreloadFile, encryptedContentPreloadFile, encryptionKey);
@@ -76,11 +75,11 @@ public static class MediaExtensions
 
         fileTransferUtility.Upload(uploadRequest);
 
-        System.IO.File.Delete(uploadedFile);
-        System.IO.File.Delete(contentFile);
-        System.IO.File.Delete(contentPreloadFile);
-        System.IO.File.Delete(encryptedContentFile);
-        System.IO.File.Delete(encryptedContentPreloadFile);
+        File.Delete(uploadedFile);
+        File.Delete(contentFile);
+        File.Delete(contentPreloadFile);
+        File.Delete(encryptedContentFile);
+        File.Delete(encryptedContentPreloadFile);
 
         var media = new Media
         {
@@ -94,31 +93,5 @@ public static class MediaExtensions
         return media;
     }
 
-    public static void TranscodeToH264(string inputPath, string outputPath, int? clipLengthSeconds = null, int? startTimeSeconds = 0, int? audioBitRate = 192, int constantRateFactor = 22)
-    {
-        string durationArg = clipLengthSeconds.HasValue ? $"-t {clipLengthSeconds.Value}" : string.Empty;
-
-        ProcessStartInfo startInfo = new ProcessStartInfo
-        {
-            FileName = "ffmpeg",
-            //TODO: ENhance the below with support for a "startTimeSeconds" argument.
-            Arguments = $"-ss {startTimeSeconds} -i \"{inputPath}\" {durationArg} -c:v libx264 -preset slow -crf {constantRateFactor} -c:a aac -b:a {audioBitRate}k -movflags +faststart \"{outputPath}\"",
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            CreateNoWindow = true
-        };
-
-        using (Process process = new Process { StartInfo = startInfo })
-        {
-            process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
-            process.Start();
-            process.BeginOutputReadLine();
-            process.BeginErrorReadLine();
-            process.WaitForExit();
-        }
-
-        Console.WriteLine("Transcoding complete!");
-    }
+    
 }

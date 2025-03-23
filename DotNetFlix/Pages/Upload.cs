@@ -44,28 +44,8 @@ internal class Upload : Page
         if (context.Request.Path.StartsWithSegments("/Preview"))
         {
             var previewFileName = sql.GetSessionData(sessionId, PreviewFileNameKey);
-
-            if (!System.IO.File.Exists(previewFileName))
-            {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
-                return;
-            }
-
-            var fileInfo = new FileInfo(previewFileName);
-
-            await context.Response.SendFileAsync(previewFileName);  //Can we support seeking here?
+            await MediaExtensions.ServeRangeVideoContent(context, previewFileName);
             return;
-            //// The method to return the file
-            //var fileResult = new FileStreamResult(new FileStream(previewFileName, FileMode.Open, FileAccess.Read, FileShare.Read), "video/mp4")
-            //{
-            //    FileDownloadName = Path.GetFileName(previewFileName)
-            //};
-
-            //// Ensure ASP.NET Core handles range requests and other headers automatically
-            //fileResult.EnableRangeProcessing = true;
-
-            //// You can return the file directly to the response
-            //await fileResult.ExecuteResultAsync(context);
         }
 
         _ = Enum.TryParse(sql.GetSessionData(sessionId, nameof(ViewMode)), out ViewMode viewMode);
