@@ -140,6 +140,12 @@ internal class Upload : Page
                     var fileUploadIdString = sql.GetSessionData(sessionId, FileUploadIdKey);
                     var fileUploadId = long.Parse(fileUploadIdString);
                     sql.SetFileUploadCompleted(fileUploadId);
+                    var fileUpload = sql.GetFileUpload(fileUploadId);
+                    var previewFileName = Guid.NewGuid().ToString("N") + ".mp4";
+                    var extension = new FileInfo(fileUpload.Name).Extension;
+                    var fileName = fileUploadId + extension;
+                    MediaExtensions.TranscodeToH264(fileName, previewFileName, 30);
+                    sql.SetSessionData(sessionId, PreviewFileNameKey, previewFileName);
                     await Get(context, sql, sessionId);
                     break;
                 }
@@ -191,7 +197,7 @@ internal class Upload : Page
     " : string.Empty)}
 
     {(viewMode == ViewMode.UploadComplete ? $@"
-        <h1>Uploaded File Information</h1>
+        <h1 style='margin-top:0'>Uploaded File Information</h1>
         <table>
             <tr>
                 <td><b>File Name</b></td>
@@ -224,10 +230,11 @@ internal class Upload : Page
             </tr>
         </table>
         <h1>Preview</h1>
-        <p>Generate a 30 second preview that demonstrates the selected transcoding settings.</p>
+        <p>Demonstrates the selected transcoding settings.</p>
         <b>Start Time (seconds)</b>
         <input type='text' name='{StartTimeSecondsElement}' value='0'>
         <button type='submit' name='{Action}' value='{GeneratePreviewAction}'>Preview</button>       
+        <br>
         <br>
         <video src='/Preview' controls autoplay muted loop></video>
         <br>
