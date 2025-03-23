@@ -1,7 +1,4 @@
-﻿using System.Data.SQLite;
-using System.Security.Cryptography;
-using Dapper;
-using DotNetFlix.Data;
+﻿using System.Security.Cryptography;
 
 namespace DotNetFlix;
 
@@ -72,21 +69,5 @@ internal class Cryptography
         aes.Padding = PaddingMode.PKCS7;
         using CryptoStream cryptoStream = new CryptoStream(fsInput, aes.CreateDecryptor(), CryptoStreamMode.Read);
         cryptoStream.CopyTo(fsOutput);
-    }
-}
-
-public static class CryptographyDataExtensions
-{ 
-    public static void InitializeCryptography(this SQLiteConnection sql, string systemPassword)
-    {
-        var masterEncryptionKey = Cryptography.GetBytes(systemPassword);
-
-        sql.Execute($@"UPDATE {SettingsTable.TableName}
-            SET     {nameof(SettingsTable.Value)} = @{nameof(SettingsTable.Value)}
-            WHERE   {nameof(SettingsTable.Key)} = @{nameof(SettingsTable.Key)}", new
-        {
-            Key = nameof(Configuration.MasterEncryptionKey),
-            Value = Convert.ToBase64String(masterEncryptionKey)
-        });
     }
 }

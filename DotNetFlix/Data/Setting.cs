@@ -1,5 +1,4 @@
 ﻿using System.Data.SQLite;
-using System.Security.Cryptography;
 using Dapper;
 
 namespace DotNetFlix.Data;
@@ -20,7 +19,7 @@ public class SettingsTable
 
 public static class SettingsExtensions
 {
-    public static void InitializeSettings(this SQLiteConnection sql)
+    public static void InitializeSettings(this SQLiteConnection sql, string systemPassword)
     {
         var properties = typeof(Configuration).GetProperties();
 
@@ -52,6 +51,9 @@ public static class SettingsExtensions
                 });
             }
         }
+
+        var masterEncryptionKey = Cryptography.GetBytes(systemPassword);
+        sql.UpdateSetting(nameof(Configuration.MasterEncryptionKey), Convert.ToBase64String(masterEncryptionKey));
     }
 
     public static List<Setting> GetSettings(this SQLiteConnection sql)
