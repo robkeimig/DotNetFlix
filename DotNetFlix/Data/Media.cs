@@ -65,7 +65,7 @@ public static class MediaDataExtensions
 
         var uploadRequest = new TransferUtilityUploadRequest
         {
-            BucketName = "test",
+            BucketName = configuration.AwsS3BucketName,
             FilePath = contentFile,
             Key = contentId.ToString("N"),
             StorageClass = S3StorageClass.Standard,
