@@ -54,5 +54,13 @@ CREATE TABLE {FileUploadsTable.TableName} (
     [{nameof(FileUploadsTable.Size)}] INTEGER,
     [{nameof(FileUploadsTable.CreatedUnixTimestamp)}] INTEGER,
     [{nameof(FileUploadsTable.UploadCompletedUnixTimestamp)}] INTEGER);
+
+CREATE TABLE {MediaTable.TableName} (
+    [{nameof(MediaTable.Id)}] INTEGER PRIMARY KEY,
+    [{nameof(MediaTable.Title)}] TEXT,
+    [{nameof(MediaTable.ContentId)}] TEXT,
+    [{nameof(MediaTable.ContentPreloadId)}] TEXT,
+    [{nameof(MediaTable.EncryptionKey)}] BINARY,
+    [{nameof(MediaTable.IsPending)}] INTEGER);
 ");
 }

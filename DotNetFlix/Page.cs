@@ -6,6 +6,8 @@ namespace DotNetFlix;
 
 public abstract class Page
 {
+    protected const string CurrentMediaId = "CurrentMediaId";
+
     public const string Action = "Action";
     static readonly Dictionary<string, Page> PageMap;
 

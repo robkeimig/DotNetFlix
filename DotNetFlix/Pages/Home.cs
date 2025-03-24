@@ -9,10 +9,17 @@ internal class Home : Page
 {
     public const string UploadAction = "Upload";
     public const string SettingsAction = "Settings";
+    public const string MediaAction = "Media";
+
     public override bool IsDefault => true;
 
     public override async Task Get(HttpContext context, SQLiteConnection sql, long sessionId)
     {
+        if (context.Request.Path.StartsWithSegments("/watch"))
+        {
+
+        }
+
         var session = sql.GetSession(sessionId);
         await context.Response.Body.WriteAsync(Encoding.UTF8.GetBytes(View(sql, sessionId)), context.RequestAborted);
     }
@@ -38,30 +45,24 @@ internal class Home : Page
 
     string View(SQLiteConnection sql, long sessionId)
     {
-        var movies = sql.GetMovies(sessionId);
-        return HtmlTemplate(Html(movies), Css(), Js());
+        var media = sql.GetMedia();
+        return HtmlTemplate(Html(media), Css(), Js());
     }
 
-    string Html(List<Movie> movies) => $@"
+    string Html(List<Media> media) => $@"
 <div class='container' />
     <form action='/' method='POST' enctype='multipart/data'>
         <button type='submit' name='{Action}' value='{UploadAction}'>Upload Media</button>
         <button type='submit' name='{Action}' value='{SettingsAction}'>Settings</button>
     </form>
-    <h1>Movies</h1>
+    <h1>Media</h1>
     <table>
         <tr>
             <th>Title</th>
-            <th>Year</th>
-            <th>Genre</th>
-            <th></th>
         </tr>
-        {string.Join('\n',movies.Select(movie => $@"
+        {string.Join('\n',media.Select(m => $@"
             <tr>
-                <td>{movie.Title}</td>
-                <td>{movie.Genre}</td>
-                <td>{movie.Year}</td>
-                <td><a href='/...'>Watch Now</td>
+                <td><a href='Watch/{m.Id}'>{m.Title}</a></td>
             </tr>
         "))}
     </table>
@@ -78,6 +79,5 @@ internal class Home : Page
 ";
 
     string Js() => $@"
-//...
 ";
 }
