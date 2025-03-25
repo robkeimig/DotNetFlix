@@ -59,5 +59,15 @@ CREATE TABLE {MediaTable.TableName} (
     [{nameof(MediaTable.Id)}] INTEGER PRIMARY KEY,
     [{nameof(MediaTable.Title)}] TEXT,
     [{nameof(MediaTable.IsPending)}] INTEGER);
+
+CREATE TABLE {MediaBlocksTable.TableName} (
+    [{nameof(MediaBlocksTable.Id)}] INTEGER PRIMARY KEY,
+    [{nameof(MediaBlocksTable.MediaId)}] INTEGER,
+    [{nameof(MediaBlocksTable.Sequence)}] INTEGER,
+    [{nameof(MediaBlocksTable.Size)}] INTEGER,
+    [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] INTEGER,
+    [{nameof(MediaBlocksTable.IsCached)}] INTEGER,
+    [{nameof(MediaBlocksTable.EncryptionKey)}] BINARY);
+
 ");
 }

@@ -165,7 +165,7 @@ internal class Upload : Page
                     var fileUpload = sql.GetFileUpload(fileUploadId);
                     var extension = new FileInfo(fileUpload.Name).Extension;
                     var fileName = fileUploadId + extension;
-                    sql.CreateMedia(fileName, "test");
+                    await sql.CreateMedia(fileName, "test");
                     sql.ClearSessionData(sessionId);
                     sql.SetSessionPage(sessionId, nameof(Home));
                     await Instance(nameof(Home)).Get(context, sql, sessionId);

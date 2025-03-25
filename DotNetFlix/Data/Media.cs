@@ -104,10 +104,10 @@ public static class MediaDataExtensions
     public static async Task<Media> CreateMedia(this SQLiteConnection sql, string uploadedFile, string title)
     {
         var configuration = sql.GetConfiguration();
-        var contentId = Guid.NewGuid();
-        var contentFile = contentId.ToString("N")+".mp4";
-        var contentStatus = MediaExtensions.TranscodeToH264(uploadedFile, contentFile);
-        while (!contentStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
+        var transcodedFile = Guid.NewGuid().ToString("N")+".mp4";
+        var transcodingStatus = MediaExtensions.TranscodeToH264(uploadedFile, transcodedFile);
+
+        while (!transcodingStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
 
         var media = new Media
         {
@@ -125,21 +125,21 @@ public static class MediaDataExtensions
             (
                 @{nameof(MediaTable.Title)},
                 @{nameof(MediaTable.IsPending)} 
-            )", Map(media));
-
+            )
+            RETURNING [{nameof(MediaTable.Id)}]", Map(media));
 
         var mediaBlockSequence = 0;
-        using var contentFileStream = new FileStream(contentFile, FileMode.Open, FileAccess.Read);
+        var contentFileStream = new FileStream(transcodedFile, FileMode.Open, FileAccess.Read);
         
         //Create Media Blocks until we've consumed the entire stream.
-        while (await sql.CreateMediaBlock(media.Id, mediaBlockSequence++, contentFileStream) != null) ;
+        while (await sql.CreateMediaBlock(media.Id, mediaBlockSequence++, contentFileStream)) ;
 
-        //Cleanup the original file & content file.
-        //The media block creation process will handle any relevant cleanup internally above. 
+        contentFileStream.Close();
+        await contentFileStream.DisposeAsync();
+
         File.Delete(uploadedFile);
-        File.Delete(contentFile);
+        File.Delete(transcodedFile);
 
-        //Flag the Media as available for consumption (IsPending = 0 - all blocks are now available).
         sql.Execute($@"UPDATE {MediaTable.TableName} 
             SET [{nameof(MediaTable.IsPending)}] = 0
             WHERE   [{nameof(MediaTable.Id)}] = @{nameof(MediaTable.Id)}", new

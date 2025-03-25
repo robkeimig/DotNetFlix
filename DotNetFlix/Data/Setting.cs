@@ -47,11 +47,17 @@ public static class SettingsExtensions
                     )", new
                 {
                     Key = property.Name,
-                    Value = string.Empty
+                    Value = DefaultSettingValue(property.Name)
                 });
             }
         }
     }
+
+    private static string? DefaultSettingValue(string name) => name switch
+    {
+        nameof(Configuration.CacheSize) => Constants.DefaultCacheSize.ToString(),
+        _ => null,
+    };
 
     public static List<Setting> GetSettings(this SQLiteConnection sql)
     {

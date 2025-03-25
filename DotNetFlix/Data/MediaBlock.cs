@@ -63,24 +63,6 @@ public static class MediaBlockDataExtensions
         }, transaction);
 
         var mediaBlock = Map(mediaBlockRow);
-        
-        if (mediaBlock.IsCached)
-        {
-            await transaction.RollbackAsync();
-            await transaction.DisposeAsync();
-            return;
-        }
-
-        var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
-        var configuration = sql.GetConfiguration();
-        var s3ObjectName = id.ToString();
-        var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
-        var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
-        var fileTransferUtility = new TransferUtility(s3Client);
-        
-        fileTransferUtility.Download(mediaBlockFile, configuration.AwsS3BucketName, s3ObjectName);
-
-        
 
         await sql.ExecuteAsync($@"UPDATE {MediaBlocksTable.TableName}
             SET [{nameof(MediaBlocksTable.IsCached)}] = 1,
@@ -91,6 +73,17 @@ public static class MediaBlockDataExtensions
             LastAccessUnixTimestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds(),
         }, transaction);
 
+        if (!mediaBlock.IsCached)
+        {
+            var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
+            var configuration = sql.GetConfiguration();
+            var s3ObjectName = id.ToString();
+            var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
+            var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
+            var fileTransferUtility = new TransferUtility(s3Client);
+            fileTransferUtility.Download(mediaBlockFile, configuration.AwsS3BucketName, s3ObjectName);
+        }
+
         await transaction.CommitAsync();
         await transaction.DisposeAsync();
     }
@@ -99,7 +92,7 @@ public static class MediaBlockDataExtensions
     {
         var buffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize);
         int bytesRead = 0;
-        var endOfStream = false;
+        var hasMoreData = true;
 
         while (bytesRead < Constants.MediaBlockSize)
         {
@@ -107,7 +100,7 @@ public static class MediaBlockDataExtensions
             
             if (read == 0)
             {
-                endOfStream = true;
+                hasMoreData = false;
                 break;
             }
 
@@ -155,7 +148,7 @@ public static class MediaBlockDataExtensions
         };
 
         var response = await s3Client.PutObjectAsync(request);
-        return endOfStream;
+        return hasMoreData;
     }
 
     public static MediaBlock Map(MediaBlocksTable mediaBlock) => new MediaBlock
