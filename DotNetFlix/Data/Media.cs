@@ -132,7 +132,7 @@ public static class MediaDataExtensions
         using var contentFileStream = new FileStream(contentFile, FileMode.Open, FileAccess.Read);
         
         //Create Media Blocks until we've consumed the entire stream.
-        while (await sql.CreateMediaBlock(media.Id, mediaBlockSequence++, contentFileStream)) ;
+        while (await sql.CreateMediaBlock(media.Id, mediaBlockSequence++, contentFileStream) != null) ;
 
         //Cleanup the original file & content file.
         //The media block creation process will handle any relevant cleanup internally above. 

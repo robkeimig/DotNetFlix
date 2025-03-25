@@ -21,7 +21,7 @@ internal class Cryptography
         return pbkdf2.GetBytes(KeyLength);
     }
 
-    public static byte[] GetBytes()
+    public static byte[] GenerateEncryptionKey()
     {
         byte[] bytes = new byte[KeyLength];
         
