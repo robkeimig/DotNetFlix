@@ -104,7 +104,7 @@ internal class Settings : Page
                     <th>Value</th>
                     <th>Edit</th>
                 </tr>
-                {string.Join('\n', settings.Where(s => s.Key != nameof(Configuration.MasterEncryptionKey)).Select(setting => $@"
+                {string.Join('\n', settings.Select(setting => $@"
                 <tr>
                     <td>{setting.Key}</td>
                     <td>{setting.Value}</td>

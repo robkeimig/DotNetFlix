@@ -19,7 +19,7 @@ public class SettingsTable
 
 public static class SettingsExtensions
 {
-    public static void InitializeSettings(this SQLiteConnection sql, string systemPassword)
+    public static void InitializeSettings(this SQLiteConnection sql)
     {
         var properties = typeof(Configuration).GetProperties();
 
@@ -51,9 +51,6 @@ public static class SettingsExtensions
                 });
             }
         }
-
-        var masterEncryptionKey = Cryptography.GetBytes(systemPassword);
-        sql.UpdateSetting(nameof(Configuration.MasterEncryptionKey), Convert.ToBase64String(masterEncryptionKey));
     }
 
     public static List<Setting> GetSettings(this SQLiteConnection sql)

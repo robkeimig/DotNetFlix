@@ -1,25 +1,17 @@
 ﻿using System.Data.SQLite;
-using System.Text.Json;
 using DotNetFlix;
 using DotNetFlix.Data;
 
-if (!File.Exists($"{nameof(SystemPassword)}.json"))
-{
-    Console.WriteLine($"{nameof(SystemPassword)}.json file missing! It needs to be in the same directory as the executable.");
-    return;
-}
-
-var systemPasswordJson = File.ReadAllText(nameof(SystemPassword)+".json");
-var systemPassword = JsonSerializer.Deserialize<SystemPassword>(systemPasswordJson).Password;
+Directory.CreateDirectory(Constants.MediaBlockCachePath);
 var sql = new SQLiteConnection("Data Source = data.db");
-
 sql.Open();
 sql.EnsureSchema();
-sql.InitializeSettings(systemPassword);
+sql.InitializeSettings();
 var webServer = new WebServer(sql);
 
 while (true)
 {
     //Background maintenance work goes here.
+    //throw new NotImplementedException("TODO: perform expiration of media block cache entries.");
     Thread.Sleep(1);
 }

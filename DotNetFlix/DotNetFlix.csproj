@@ -10,16 +10,6 @@
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App"></FrameworkReference>
   </ItemGroup>
-  
-  <ItemGroup>
-    <None Remove="SystemPassword.json" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Content Include="SystemPassword.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="3.7.415.19" />

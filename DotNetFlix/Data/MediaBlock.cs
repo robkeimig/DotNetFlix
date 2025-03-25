@@ -5,6 +5,7 @@ using Amazon.S3;
 using Amazon;
 using Amazon.S3.Model;
 using Dapper;
+using Amazon.S3.Transfer;
 
 namespace DotNetFlix.Data;
 
@@ -70,8 +71,16 @@ public static class MediaBlockDataExtensions
             return;
         }
 
-        throw new NotImplementedException("TODO: Pull the block from S3, decrypt it and place it in cache folder.");
-        throw new NotImplementedException("TODO: Separately in the main management thread on a less frequent basis we perform expiration of cache entries.");
+        var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
+        var configuration = sql.GetConfiguration();
+        var s3ObjectName = id.ToString();
+        var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
+        var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
+        var fileTransferUtility = new TransferUtility(s3Client);
+        
+        fileTransferUtility.Download(mediaBlockFile, configuration.AwsS3BucketName, s3ObjectName);
+
+        
 
         await sql.ExecuteAsync($@"UPDATE {MediaBlocksTable.TableName}
             SET [{nameof(MediaBlocksTable.IsCached)}] = 1,

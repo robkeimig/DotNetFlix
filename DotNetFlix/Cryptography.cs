@@ -4,22 +4,14 @@ namespace DotNetFlix;
 
 internal class Cryptography
 {
-    const int SaltSize = 16;
     const int KeyLength = 32;
     const int InitializationVectorSize = 16;
-    const int Iterations = 1_000_000;
 
     public static string GenerateTokenString() =>
        Convert.ToBase64String(RandomNumberGenerator.GetBytes(KeyLength))
        .Replace("/", "")
        .Replace("=", "")
        .Replace("+", "");
-
-    public static byte[] GetBytes(string password)
-    {
-        using var pbkdf2 = new Rfc2898DeriveBytes(password, SaltSize, Iterations, HashAlgorithmName.SHA512);
-        return pbkdf2.GetBytes(KeyLength);
-    }
 
     public static byte[] GenerateEncryptionKey()
     {
