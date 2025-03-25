@@ -13,13 +13,14 @@ internal class Player : Page
     {
         var currentMediaIdString = sql.GetSessionData(sessionId, CurrentMediaId);
         var currentMediaId = long.Parse(currentMediaIdString);
-        sql.WarmupMedia(currentMediaId);
+        //sql.WarmupMedia(currentMediaId);
         var media = sql.GetMedia(currentMediaId);
 
         if (context.Request.Path.StartsWithSegments("/video"))
         {
-            var file = media.ContentPreloadId.ToString("N") + ".mp4";
-            await MediaExtensions.ServeRangeVideoContent(context, file);
+            throw new NotImplementedException();
+            //var file = media.ContentPreloadId.ToString("N") + ".mp4";
+            //await MediaExtensions.ServeRangeVideoContent(context, file);
             return;
         }
 

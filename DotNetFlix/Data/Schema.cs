@@ -58,9 +58,6 @@ CREATE TABLE {FileUploadsTable.TableName} (
 CREATE TABLE {MediaTable.TableName} (
     [{nameof(MediaTable.Id)}] INTEGER PRIMARY KEY,
     [{nameof(MediaTable.Title)}] TEXT,
-    [{nameof(MediaTable.ContentId)}] TEXT,
-    [{nameof(MediaTable.ContentPreloadId)}] TEXT,
-    [{nameof(MediaTable.EncryptionKey)}] BINARY,
     [{nameof(MediaTable.IsPending)}] INTEGER);
 ");
 }
