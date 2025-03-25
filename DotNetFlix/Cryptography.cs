@@ -25,41 +25,37 @@ internal class Cryptography
         return bytes;
     }
 
-    public static void EncryptFile(string inputFilePath, string outputFilePath, byte[] encryptionKey)
+    public static void EncryptStream(Stream inputStream, Stream outputStream, byte[] encryptionKey)
     {
         var key = SHA256.HashData(encryptionKey);
-        byte[] iv = new byte[InitializationVectorSize];  // AES block size (128-bit IV)
+        byte[] iv = new byte[InitializationVectorSize]; 
 
         using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
         {
-            rng.GetBytes(iv); // Generate a new IV for encryption
+            rng.GetBytes(iv);
         }
 
-        using FileStream fsInput = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
-        using FileStream fsOutput = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
         using Aes aes = Aes.Create();
         aes.Key = key;
         aes.IV = iv;
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
-        fsOutput.Write(iv, 0, iv.Length);
-        using CryptoStream cryptoStream = new CryptoStream(fsOutput, aes.CreateEncryptor(), CryptoStreamMode.Write);
-        fsInput.CopyTo(cryptoStream);
+        outputStream.Write(iv, 0, iv.Length);
+        using CryptoStream cryptoStream = new CryptoStream(outputStream, aes.CreateEncryptor(), CryptoStreamMode.Write, true);
+        inputStream.CopyTo(cryptoStream);  
     }
 
-    public static void DecryptFile(string inputFilePath, string outputFilePath, byte[] encryptionKey)
+    public static void DecryptStream(Stream inputStream, Stream outputStream, byte[] encryptionKey)
     {
         var key = SHA256.HashData(encryptionKey);
         byte[] iv = new byte[InitializationVectorSize];
-        using FileStream fsInput = new FileStream(inputFilePath, FileMode.Open, FileAccess.Read);
-        using FileStream fsOutput = new FileStream(outputFilePath, FileMode.Create, FileAccess.Write);
         using Aes aes = Aes.Create();
-        fsInput.Read(iv, 0, iv.Length);
+        inputStream.Read(iv, 0, iv.Length);
         aes.Key = key;
         aes.IV = iv;
         aes.Mode = CipherMode.CBC;
         aes.Padding = PaddingMode.PKCS7;
-        using CryptoStream cryptoStream = new CryptoStream(fsInput, aes.CreateDecryptor(), CryptoStreamMode.Read);
-        cryptoStream.CopyTo(fsOutput);
+        using CryptoStream cryptoStream = new CryptoStream(inputStream, aes.CreateDecryptor(), CryptoStreamMode.Read, true);
+        cryptoStream.CopyTo(outputStream);  
     }
 }

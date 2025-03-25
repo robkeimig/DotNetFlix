@@ -4,8 +4,8 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Amazon;
 using Amazon.S3.Model;
-using Dapper;
 using Amazon.S3.Transfer;
+using Dapper;
 
 namespace DotNetFlix.Data;
 
@@ -91,6 +91,7 @@ public static class MediaBlockDataExtensions
     public static async Task<bool> CreateMediaBlock(this SQLiteConnection sql, long mediaId, long sequence, Stream data)
     {
         var buffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize);
+        var encryptedBuffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize + 256); //Leave some room for the IV & padding.
         int bytesRead = 0;
         var hasMoreData = true;
 
@@ -138,16 +139,26 @@ public static class MediaBlockDataExtensions
             RETURNING [{nameof(MediaBlocksTable.Id)}]
         ", Map(mediaBlock));
 
+        var encryptedMemoryStream = new MemoryStream(encryptedBuffer);
+        Cryptography.EncryptStream(new MemoryStream(buffer, 0, bytesRead), encryptedMemoryStream, mediaBlock.EncryptionKey);
+        var finalStream = new MemoryStream(encryptedBuffer, 0, (int)encryptedMemoryStream.Position);
+
         var request = new PutObjectRequest
         {
             BucketName = configuration.AwsS3BucketName,
             Key = mediaBlock.Id.ToString(),
             StorageClass = S3StorageClass.Standard, //TODO: Modify to GlacierInstantRetrieval once we are stable.
-            InputStream = new MemoryStream(buffer, 0, bytesRead),
+            InputStream = finalStream,
             CannedACL = S3CannedACL.Private,
         };
 
         var response = await s3Client.PutObjectAsync(request);
+
+        encryptedMemoryStream.Dispose();
+        finalStream.Dispose();
+        ArrayPool<byte>.Shared.Return(buffer);
+        ArrayPool<byte>.Shared.Return(encryptedBuffer);
+
         return hasMoreData;
     }
 
