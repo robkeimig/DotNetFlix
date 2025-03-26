@@ -64,8 +64,7 @@ public static class MediaBlockDataExtensions
         var mediaBlock = Map(mediaBlockRow);
 
         await sql.ExecuteAsync($@"UPDATE {MediaBlocksTable.TableName}
-            SET [{nameof(MediaBlocksTable.IsCached)}] = 1,
-                [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] = @{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}
+            SET [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] = @{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}
             WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
         {
             Id = mediaBlock.Id,
@@ -99,6 +98,15 @@ public static class MediaBlockDataExtensions
             mediaBlockStream.Close();
             mediaBlockStream.Dispose();
             ArrayPool<byte>.Shared.Return(encryptedMediaBlockBuffer);
+
+            await sql.ExecuteAsync($@"
+                UPDATE  {MediaBlocksTable.TableName}
+                SET     [{nameof(MediaBlocksTable.IsCached)}] = 1
+                WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
+            {
+                Id = mediaBlock.Id,
+            }, transaction);
+
             Console.WriteLine($@"Cached Media Block {mediaBlock.Id}");
         }
 
@@ -117,12 +125,14 @@ public static class MediaBlockDataExtensions
 
         if (totalSize > configuration.CacheSize)
         {
+            using var transaction = sql.BeginTransaction();
+
             var mediaBlockRow = sql.QueryFirst<MediaBlocksTable>($@"
                     SELECT      *
                     FROM        {MediaBlocksTable.TableName} 
                     WHERE       [{nameof(MediaBlocksTable.IsCached)}] = 1
                     ORDER BY    [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] ASC 
-                    LIMIT       1");
+                    LIMIT       1", transaction);
 
             var mediaBlock = Map(mediaBlockRow);
 
@@ -132,9 +142,10 @@ public static class MediaBlockDataExtensions
                 WHERE [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
             {
                 Id = mediaBlock.Id
-            });
+            }, transaction);
 
             File.Delete(Path.Combine(Constants.MediaBlockCachePath, mediaBlock.Id.ToString()));
+            transaction.Commit();
             Console.WriteLine($"Expired Media Block {mediaBlock.Id} from cache.");
         }   
     }
@@ -158,7 +169,6 @@ public static class MediaBlockDataExtensions
 
             bytesRead += read;
         }
-
 
         var configuration = sql.GetConfiguration();
         var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);

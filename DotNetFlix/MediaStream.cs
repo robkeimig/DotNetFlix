@@ -8,7 +8,8 @@ internal class MediaStream : Stream
     readonly long _length;
     readonly SQLiteConnection _sql;
     readonly long _mediaId;
-    
+    bool _disposed = false; 
+
     long _position;
     FileStream? _mediaBlockStream;
     long _mediaBlockSequence;
@@ -46,6 +47,29 @@ internal class MediaStream : Stream
         }
     }
 
+    public void Dispose()
+    {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed)
+            return;
+
+        if (disposing)
+        {
+            if (_mediaBlockStream != null)
+            {
+                _mediaBlockStream.Close();
+                _mediaBlockStream.Dispose();
+            }
+        }
+
+        _disposed = true;
+    }
+
     public override void Flush()
     {
         return;
@@ -73,6 +97,7 @@ internal class MediaStream : Stream
             {
                 if (_mediaBlockStream != null)
                 {
+                    _mediaBlockStream.Close();
                     await _mediaBlockStream.DisposeAsync();
                 }
 

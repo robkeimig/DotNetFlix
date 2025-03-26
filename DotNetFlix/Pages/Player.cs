@@ -17,7 +17,7 @@ internal class Player : Page
 
         if (context.Request.Path.StartsWithSegments("/video"))
         {
-            var mediaStream = new MediaStream(sql, media.Id);
+            using var mediaStream = new MediaStream(sql, media.Id);
             await MediaExtensions.ServeRangeVideoContent(context, mediaStream, media.Size, Constants.VideoContentType);
             return;
         }
