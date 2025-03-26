@@ -51,6 +51,7 @@ public static class MediaBlockDataExtensions
 
     public static async Task LoadMediaBlock(this SQLiteConnection sql, long id)
     {
+        var configuration = sql.GetConfiguration();
         using var transaction = await sql.BeginTransactionAsync();
 
         var mediaBlockRow = await sql.QueryFirstAsync<MediaBlocksTable>($@"
@@ -75,7 +76,6 @@ public static class MediaBlockDataExtensions
         {
             var encryptedMediaBlockBuffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize + 256);
             var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
-            var configuration = sql.GetConfiguration();
             var s3ObjectName = id.ToString();
             var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
             var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
