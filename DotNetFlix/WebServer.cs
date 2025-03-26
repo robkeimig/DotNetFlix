@@ -4,10 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
-using DotNetFlix.Data;
-using DotNetFlix.Pages;
 using Microsoft.AspNetCore.Http.Features;
 using System.Data.SQLite;
+using DotNetFlix.Data;
+using DotNetFlix.Pages;
 
 namespace DotNetFlix;
 
@@ -34,12 +34,12 @@ internal class WebServer
                 s.AddSingleton(this);
                 s.Configure<FormOptions>(options =>
                 {
-                    options.MultipartBodyLengthLimit = 1024L * 1024L * 1024L * 32L;
+                    options.MultipartBodyLengthLimit = Constants.MaximumUploadSize;
                 });
             })
             .ConfigureKestrel(s =>
             {
-                s.Limits.MaxRequestBodySize = 1024L * 1024L * 1024L * 32L;
+                s.Limits.MaxRequestBodySize = Constants.MaximumUploadSize;
             })
             .Build()
             .RunAsync();
