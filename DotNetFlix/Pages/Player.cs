@@ -50,14 +50,31 @@ internal class Player : Page
 
 <h1>{media.Title}</h1>
 
+<div class='video-container'>
 {(media.IsPending ? "Media unavailable - retry in a few seconds." : $@"
-    <video src='/video'></video>
+    <video src='/video' controls autoplay muted></video>
 ")}
+</div>
 
 </div>
 ";
 
-    string Css() => $@"";
+    string Css() => $@"
+body {{
+    background-color: #000;
+    color: #c9c9c9;
+}}
+.video-container {{
+    width:100%;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+}}
+video {{
+    width: 100%;
+    height: auto;
+    display: block;
+}}";
 
     string Js() => $@"";
 }

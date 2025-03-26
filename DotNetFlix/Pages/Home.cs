@@ -22,6 +22,7 @@ internal class Home : Page
                 sql.SetSessionData(sessionId, SessionDataKeys.MediaId,  mediaId.ToString());
                 sql.SetSessionPage(sessionId, nameof(Player));
                 await Instance(nameof(Player)).Get(context, sql, sessionId);
+                return;
             }
         }
 
@@ -75,6 +76,9 @@ internal class Home : Page
 ";
 
     string Css() =>@$"
+a {{
+    color: #FFF;
+}}
 .container {{
 }}
 

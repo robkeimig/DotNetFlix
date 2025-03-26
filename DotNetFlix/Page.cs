@@ -43,6 +43,8 @@ public abstract class Page
         body, html {{
             margin: 0;
             height: 100%;
+            background-color:#000;
+            color:#d0d0d0;
         }}
 
         {css}
