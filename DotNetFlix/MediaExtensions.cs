@@ -5,7 +5,65 @@ namespace DotNetFlix;
 
 internal static class MediaExtensions
 {
-    const string ContentType = "video/mp4";
+    public static async Task ServeRangeVideoContent(HttpContext httpContext, Stream stream, long contentLength, string contentType)
+    {
+        var rangeHeader = httpContext.Request.Headers.Range;
+
+        if (stream == null || contentLength <= 0)
+        {
+            httpContext.Response.StatusCode = 404;
+            return;
+        }
+
+        if (string.IsNullOrEmpty(rangeHeader))
+        {
+            await ServeFullStream(httpContext, stream, contentLength, contentType);
+            return;
+        }
+
+        var range = ParseRange(rangeHeader, contentLength);
+
+        if (range == null || range?.Start >= contentLength || range?.End >= contentLength || range?.Start > range?.End)
+        {
+            httpContext.Response.StatusCode = 416;
+            httpContext.Response.Headers.ContentRange = $"bytes */{contentLength}";
+            return;
+        }
+
+        await ServeByteRangeFromStream(httpContext, stream, range.Value.Start, range.Value.End, contentLength, contentType);
+    }
+
+    private static async Task ServeFullStream(HttpContext httpContext, Stream stream, long contentLength, string contentType)
+    {
+        httpContext.Response.StatusCode = 200;
+        httpContext.Response.ContentType = contentType;
+        httpContext.Response.ContentLength = contentLength;
+
+        stream.Seek(0, SeekOrigin.Begin);
+        await stream.CopyToAsync(httpContext.Response.Body);
+    }
+
+    private static async Task ServeByteRangeFromStream(HttpContext httpContext, Stream stream, long start, long end, long totalLength, string contentType)
+    {
+        var length = end - start + 1;
+        httpContext.Response.StatusCode = 206;
+        httpContext.Response.ContentType = contentType;
+        httpContext.Response.Headers.ContentRange = $"bytes {start}-{end}/{totalLength}";
+        httpContext.Response.ContentLength = length;
+
+        stream.Seek(start, SeekOrigin.Begin);
+
+        byte[] buffer = new byte[81920]; // 80KB buffer size
+        long remaining = length;
+        while (remaining > 0)
+        {
+            int read = await stream.ReadAsync(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+            if (read == 0) break;
+
+            await httpContext.Response.Body.WriteAsync(buffer, 0, read);
+            remaining -= read;
+        }
+    }
 
     public static async Task ServeRangeVideoContent(HttpContext httpContext, string file)
     {
@@ -71,7 +129,7 @@ internal static class MediaExtensions
     static async Task ServeFullFile(HttpContext httpContext, string filePath, long fileLength)
     {
         httpContext.Response.StatusCode = 200;
-        httpContext.Response.ContentType = ContentType;
+        httpContext.Response.ContentType = Constants.VideoContentType;
         httpContext.Response.ContentLength = fileLength;
         using FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
         await fs.CopyToAsync(httpContext.Response.Body);
@@ -81,7 +139,7 @@ internal static class MediaExtensions
     {
         var rangeLength = end - start + 1;
         httpContext.Response.StatusCode = 206; 
-        httpContext.Response.ContentType = ContentType; 
+        httpContext.Response.ContentType = Constants.VideoContentType; 
         httpContext.Response.ContentLength = rangeLength;
         httpContext.Response.Headers.ContentRange = $"bytes {start}-{end}/{fileLength}";
         using var fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);

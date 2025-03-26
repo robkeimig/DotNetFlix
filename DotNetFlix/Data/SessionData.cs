@@ -11,6 +11,14 @@ public class SessionData
     public string Value;
 }
 
+public class SessionDataKeys
+{
+    public const string FileUploadId = "FileUploadId";
+    public const string UploadFileName = "UploadFileName";
+    public const string PreviewFileName = "PreviewFileName";
+    public const string MediaId = "MediaId";
+}
+
 public class SessionDataTable
 {
     public const string TableName = "SessionData";

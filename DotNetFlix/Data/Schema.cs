@@ -58,7 +58,8 @@ CREATE TABLE {FileUploadsTable.TableName} (
 CREATE TABLE {MediaTable.TableName} (
     [{nameof(MediaTable.Id)}] INTEGER PRIMARY KEY,
     [{nameof(MediaTable.Title)}] TEXT,
-    [{nameof(MediaTable.IsPending)}] INTEGER);
+    [{nameof(MediaTable.IsPending)}] INTEGER,
+    [{nameof(MediaTable.Size)}] INTEGER);
 
 CREATE TABLE {MediaBlocksTable.TableName} (
     [{nameof(MediaBlocksTable.Id)}] INTEGER PRIMARY KEY,

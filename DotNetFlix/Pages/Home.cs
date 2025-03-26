@@ -15,9 +15,14 @@ internal class Home : Page
 
     public override async Task Get(HttpContext context, SQLiteConnection sql, long sessionId)
     {
-        if (context.Request.Path.StartsWithSegments("/watch"))
+        if (context.Request.Path.StartsWithSegments("/watch", out var remainingPath))
         {
-
+            if (long.TryParse(remainingPath.ToString().Trim('/').Trim('\\'), out var mediaId))
+            {
+                sql.SetSessionData(sessionId, SessionDataKeys.MediaId,  mediaId.ToString());
+                sql.SetSessionPage(sessionId, nameof(Player));
+                await Instance(nameof(Player)).Get(context, sql, sessionId);
+            }
         }
 
         var session = sql.GetSession(sessionId);

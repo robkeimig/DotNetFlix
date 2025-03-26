@@ -39,7 +39,7 @@ public static class MediaBlockDataExtensions
         var row = sql.QueryFirst<MediaBlocksTable>($@"
             SELECT  * 
             FROM    {MediaBlocksTable.TableName} 
-            WHERE   [{nameof(MediaBlocksTable.MediaId)}] = @{nameof(MediaBlocksTable.MediaId)},
+            WHERE   [{nameof(MediaBlocksTable.MediaId)}] = @{nameof(MediaBlocksTable.MediaId)}
             AND     [{nameof(MediaBlocksTable.Sequence)}] = @{nameof(MediaBlocksTable.Sequence)}", new
         {
             MediaId = mediaId,
@@ -56,8 +56,7 @@ public static class MediaBlockDataExtensions
         var mediaBlockRow = await sql.QueryFirstAsync<MediaBlocksTable>($@"
             SELECT  * 
             FROM    {MediaBlocksTable.TableName} 
-            WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}
-            FOR     UPDATE", new
+            WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
         {
             Id = id
         }, transaction);
@@ -75,13 +74,31 @@ public static class MediaBlockDataExtensions
 
         if (!mediaBlock.IsCached)
         {
+            var encryptedMediaBlockBuffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize + 256);
             var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
             var configuration = sql.GetConfiguration();
             var s3ObjectName = id.ToString();
             var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
             var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
-            var fileTransferUtility = new TransferUtility(s3Client);
-            fileTransferUtility.Download(mediaBlockFile, configuration.AwsS3BucketName, s3ObjectName);
+            var getObjectRequest = new GetObjectRequest
+            {
+                BucketName = configuration.AwsS3BucketName,
+                Key = s3ObjectName,
+            };
+
+            var mediaBlockStream = new FileStream(mediaBlockFile, FileMode.Create, FileAccess.Write, FileShare.Read);
+            
+            var getObjectResponse = await s3Client.GetObjectAsync(getObjectRequest);
+            var encryptedMediaBlockStream = new MemoryStream(encryptedMediaBlockBuffer, 0, (int)getObjectResponse.ContentLength);
+            await getObjectResponse.ResponseStream.CopyToAsync(encryptedMediaBlockStream);
+            encryptedMediaBlockStream.Position = 0;
+
+            Cryptography.DecryptStream(encryptedMediaBlockStream, mediaBlockStream, mediaBlock.EncryptionKey);
+
+            encryptedMediaBlockStream.Dispose();
+            mediaBlockStream.Close();
+            mediaBlockStream.Dispose();
+            ArrayPool<byte>.Shared.Return(encryptedMediaBlockBuffer);
         }
 
         await transaction.CommitAsync();

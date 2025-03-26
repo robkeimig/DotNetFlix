@@ -6,17 +6,21 @@ namespace DotNetFlix;
 internal class MediaStream : Stream
 {
     readonly long _length;
-    SQLiteConnection _sql;
-    long _mediaId;
+    readonly SQLiteConnection _sql;
+    readonly long _mediaId;
+    
     long _position;
-    FileStream? _currentMediaBlockStream;
-    long _currentMediaBlockSequence;
+    FileStream? _mediaBlockStream;
+    long _mediaBlockSequence;
 
     public MediaStream(SQLiteConnection sql, long mediaId)
     {
         _sql = sql;
         _mediaId = mediaId;
-        _currentMediaBlockSequence = -1;
+        _mediaBlockSequence = -1;
+
+        var media = sql.GetMedia(mediaId);
+        _length = media.Size;
     }
 
     public override bool CanRead => true;
@@ -65,25 +69,25 @@ internal class MediaStream : Stream
             int mediaBlockSequence = (int)(_position / Constants.MediaBlockSize);
             int mediaBlockOffset = (int)(_position % Constants.MediaBlockSize);
 
-            if (mediaBlockSequence != _currentMediaBlockSequence)
+            if (mediaBlockSequence != _mediaBlockSequence)
             {
-                if (_currentMediaBlockStream != null)
+                if (_mediaBlockStream != null)
                 {
-                    await _currentMediaBlockStream.DisposeAsync();
+                    await _mediaBlockStream.DisposeAsync();
                 }
 
                 var mediaBlock = _sql.GetMediaBlock(_mediaId, mediaBlockSequence);
                 await _sql.LoadMediaBlock(mediaBlock.Id);
 
-                _currentMediaBlockStream = new FileStream(Path.Combine(Constants.MediaBlockCachePath, mediaBlock.Id.ToString()), FileMode.Open, FileAccess.Read, FileShare.Read);
-                _currentMediaBlockSequence = mediaBlockSequence;
+                _mediaBlockStream = new FileStream(Path.Combine(Constants.MediaBlockCachePath, mediaBlock.Id.ToString()), FileMode.Open, FileAccess.Read, FileShare.Read);
+                _mediaBlockSequence = mediaBlockSequence;
             }
 
-            _currentMediaBlockStream.Seek(mediaBlockOffset, SeekOrigin.Begin);
+            _mediaBlockStream.Seek(mediaBlockOffset, SeekOrigin.Begin);
 
             int bytesAvailable = (int)Math.Min(Constants.MediaBlockSize - mediaBlockOffset, count);
             int bytesToRead = (int)Math.Min(bytesAvailable, _length - _position);
-            int bytesRead = await _currentMediaBlockStream.ReadAsync(buffer.AsMemory(offset, bytesToRead), cancellationToken);
+            int bytesRead = await _mediaBlockStream.ReadAsync(buffer.AsMemory(offset, bytesToRead), cancellationToken);
             if (bytesRead == 0) break; 
 
             _position += bytesRead;

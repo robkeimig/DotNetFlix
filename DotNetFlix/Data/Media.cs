@@ -7,6 +7,7 @@ public class Media
 {
     public long Id { get; set; }
     public string Title { get; set; }
+    public long Size { get; set; }
     public bool IsPending { get; set; }
 }
 
@@ -15,6 +16,7 @@ public class MediaTable
     public const string TableName = "Media";
     public long Id { get; set; }
     public string Title { get; set; }
+    public long Size { get; set; }
     public bool IsPending { get; set; }
 }
 
@@ -51,22 +53,27 @@ public static class MediaDataExtensions
 
         while (!transcodingStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
 
+        var transcodedFileInfo = new FileInfo(transcodedFile);
+
         var media = new Media
         {
             Title = title,
             IsPending = true,
+            Size = transcodedFileInfo.Length
         };
 
         media.Id = sql.ExecuteScalar<long>(@$"
             INSERT INTO [{MediaTable.TableName}]
             (
                 [{nameof(MediaTable.Title)}],
-                [{nameof(MediaTable.IsPending)}]
+                [{nameof(MediaTable.IsPending)}],
+                [{nameof(MediaTable.Size)}]
             )
             VALUES 
             (
                 @{nameof(MediaTable.Title)},
-                @{nameof(MediaTable.IsPending)} 
+                @{nameof(MediaTable.IsPending)},
+                @{nameof(MediaTable.Size)}
             )
             RETURNING [{nameof(MediaTable.Id)}]", Map(media));
 
@@ -95,14 +102,16 @@ public static class MediaDataExtensions
     {
         Id = media.Id,
         IsPending = media.IsPending,
-        Title = media.Title
+        Title = media.Title,
+        Size = media.Size
     };
 
     public static Media Map(MediaTable media) => new Media
     {
         Id = media.Id,
         IsPending = media.IsPending,
-        Title = media.Title
+        Title = media.Title,
+        Size = media.Size
     };
 
     public static List<Media> Map(IEnumerable<MediaTable> media) => media.Select(Map).ToList();
