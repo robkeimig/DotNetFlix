@@ -99,10 +99,44 @@ public static class MediaBlockDataExtensions
             mediaBlockStream.Close();
             mediaBlockStream.Dispose();
             ArrayPool<byte>.Shared.Return(encryptedMediaBlockBuffer);
+            Console.WriteLine($@"Cached Media Block {mediaBlock.Id}");
         }
 
         await transaction.CommitAsync();
         await transaction.DisposeAsync();
+    }
+
+    public static void ShrinkMediaBlockCache(this SQLiteConnection sql)
+    {
+        var configuration = sql.GetConfiguration();
+        
+        var totalSize = sql.ExecuteScalar<long>($@"
+            SELECT  SUM([{nameof(MediaBlocksTable.Size)}]) 
+            FROM    {MediaBlocksTable.TableName}
+            WHERE   [{nameof(MediaBlocksTable.IsCached)}] = 1");
+
+        if (totalSize > configuration.CacheSize)
+        {
+            var mediaBlockRow = sql.QueryFirst<MediaBlocksTable>($@"
+                    SELECT      *
+                    FROM        {MediaBlocksTable.TableName} 
+                    WHERE       [{nameof(MediaBlocksTable.IsCached)}] = 1
+                    ORDER BY    [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] ASC 
+                    LIMIT       1");
+
+            var mediaBlock = Map(mediaBlockRow);
+
+            sql.Execute($@"
+                UPDATE {MediaBlocksTable.TableName}
+                SET     [{nameof(MediaBlocksTable.IsCached)}] = 0
+                WHERE [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
+            {
+                Id = mediaBlock.Id
+            });
+
+            File.Delete(Path.Combine(Constants.MediaBlockCachePath, mediaBlock.Id.ToString()));
+            Console.WriteLine($"Expired Media Block {mediaBlock.Id} from cache.");
+        }   
     }
 
     public static async Task<bool> CreateMediaBlock(this SQLiteConnection sql, long mediaId, long sequence, Stream data)

@@ -86,6 +86,13 @@ internal class Settings : Page
                     await Instance(nameof(Settings)).Get(context, sql, sessionId);
                     break;
                 }
+            case nameof(Configuration.CacheSize):
+                {
+                    sql.SetSessionData(sessionId, SettingName, nameof(Configuration.CacheSize));
+                    sql.SetSessionData(sessionId, nameof(ViewMode), ViewMode.EditingSetting.ToString());
+                    await Instance(nameof(Settings)).Get(context, sql, sessionId);
+                    break;
+                }
             default:
                 throw new NotImplementedException();
         }
