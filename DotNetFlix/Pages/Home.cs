@@ -10,6 +10,7 @@ internal class Home : Page
     public const string UploadAction = "Upload";
     public const string SettingsAction = "Settings";
     public const string MediaAction = "Media";
+    public const string StatusAction = "Status";
 
     public override bool IsDefault => true;
 
@@ -44,6 +45,10 @@ internal class Home : Page
                 sql.SetSessionPage(sessionId, nameof(Settings));
                 await Instance(nameof(Settings)).Get(context, sql, sessionId);
                 break;
+            case StatusAction:
+                sql.SetSessionPage(sessionId, nameof(Status));
+                await Instance(nameof(Status)).Get(context, sql, sessionId);
+                break;
             default:
                 throw new NotImplementedException();
         }
@@ -60,6 +65,7 @@ internal class Home : Page
     <form action='/' method='POST' enctype='multipart/data'>
         <button type='submit' name='{Action}' value='{UploadAction}'>Upload Media</button>
         <button type='submit' name='{Action}' value='{SettingsAction}'>Settings</button>
+        <button type='submit' name='{Action}' value='{StatusAction}'>Status</button>
     </form>
     <h1>Media</h1>
     <table>

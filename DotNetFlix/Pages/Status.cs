@@ -28,7 +28,8 @@ internal class Status : Page
                 await Instance(nameof(Home)).Get(context, sql, sessionId);
                 break;
             default:
-                throw new NotImplementedException();
+                await Get(context, sql, sessionId);
+                break;
         }
     }
 

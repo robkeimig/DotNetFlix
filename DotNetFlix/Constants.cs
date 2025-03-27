@@ -8,4 +8,5 @@ internal class Constants
     public const string MediaBlockCachePath = "MediaBlockCache";
     public const string VideoContentType = "video/mp4";
     public const int MediaBlockSize = 1024 * 1024 * 50;
+    public const int PreviewLength = 10;
 }
