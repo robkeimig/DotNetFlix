@@ -119,8 +119,7 @@ internal class Upload : Page
                     var previewFileName = Guid.NewGuid().ToString("N") + ".mp4";
                     var extension = new FileInfo(fileUpload.Name).Extension;
                     var fileName = fileUploadId + extension;                    
-                    var previewStatus = MediaExtensions.TranscodeToH264(fileName, previewFileName, 30);
-                    while (!previewStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
+                    MediaExtensions.TranscodeToH264(fileName, previewFileName, 30);
                     sql.SetSessionData(sessionId, SessionDataKeys.PreviewFileName, previewFileName);
                     await Get(context, sql, sessionId);
                     break;
@@ -147,8 +146,7 @@ internal class Upload : Page
                     var fileUpload = sql.GetFileUpload(fileUploadId);
                     var extension = new FileInfo(fileUpload.Name).Extension;
                     var fileName = fileUploadId + extension;
-                    var previewStatus = MediaExtensions.TranscodeToH264(fileName, previewFileName, 30, startTimeSeconds);
-                    while (!previewStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
+                    MediaExtensions.TranscodeToH264(fileName, previewFileName, 30, startTimeSeconds);
                     sql.SetSessionData(sessionId, SessionDataKeys.PreviewFileName, previewFileName);
                     await Get(context, sql, sessionId);
                     break;
@@ -161,10 +159,10 @@ internal class Upload : Page
                     var fileUpload = sql.GetFileUpload(fileUploadId);
                     var extension = new FileInfo(fileUpload.Name).Extension;
                     var fileName = fileUploadId + extension;
-                    await sql.CreateMedia(fileName, title);
+                    var media = sql.CreateMedia(fileName, title);
                     sql.ClearSessionData(sessionId);
-                    sql.SetSessionPage(sessionId, nameof(Home));
-                    await Instance(nameof(Home)).Get(context, sql, sessionId);
+                    sql.SetSessionPage(sessionId, nameof(Status));
+                    await Instance(nameof(Status)).Get(context, sql, sessionId);
                     break;
                 }
             default:

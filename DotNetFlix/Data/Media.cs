@@ -9,6 +9,7 @@ public class Media
     public string Title { get; set; }
     public long Size { get; set; }
     public bool IsPending { get; set; }
+    public string PendingStatus { get; set; }
 }
 
 public class MediaTable
@@ -18,6 +19,7 @@ public class MediaTable
     public string Title { get; set; }
     public long Size { get; set; }
     public bool IsPending { get; set; }
+    public string PendingStatus { get; set; }
 }
 
 public static class MediaDataExtensions
@@ -25,8 +27,7 @@ public static class MediaDataExtensions
     public static List<Media> GetMedia(this SQLiteConnection sql)
     {
         var rows = sql.Query<MediaTable>($@"
-            SELECT [{nameof(MediaTable.Id)}],
-                    [{nameof(MediaTable.Title)}]
+            SELECT *
             FROM {MediaTable.TableName}");
 
         return Map(rows);
@@ -45,21 +46,25 @@ public static class MediaDataExtensions
         return Map(row);
     }
 
-    public static async Task<Media> CreateMedia(this SQLiteConnection sql, string uploadedFile, string title)
+    public static void SetMediaPendingStatus(this SQLiteConnection sql, long mediaId, string status)
     {
-        var configuration = sql.GetConfiguration();
-        var transcodedFile = Guid.NewGuid().ToString("N")+".mp4";
-        var transcodingStatus = MediaExtensions.TranscodeToH264(uploadedFile, transcodedFile);
+        sql.Execute($@"
+            UPDATE  {MediaTable.TableName}
+            SET     [{nameof(MediaTable.PendingStatus)}] = @{nameof(MediaTable.PendingStatus)}
+            WHERE   [{nameof(MediaTable.Id)}] = @{nameof(MediaTable.Id)}", new
+        {
+            Id = mediaId,
+            PendingStatus = status
+        });
+    }
 
-        while (!transcodingStatus.Complete) { Thread.Sleep(1); } //TODO: Iterate on this.
-
-        var transcodedFileInfo = new FileInfo(transcodedFile);
-
+    public static Media CreateMedia(this SQLiteConnection sql, string uploadedFile, string title)
+    {
         var media = new Media
         {
             Title = title,
             IsPending = true,
-            Size = transcodedFileInfo.Length
+            PendingStatus = "Transcoding",
         };
 
         media.Id = sql.ExecuteScalar<long>(@$"
@@ -67,32 +72,44 @@ public static class MediaDataExtensions
             (
                 [{nameof(MediaTable.Title)}],
                 [{nameof(MediaTable.IsPending)}],
-                [{nameof(MediaTable.Size)}]
+                [{nameof(MediaTable.PendingStatus)}]
             )
             VALUES 
             (
                 @{nameof(MediaTable.Title)},
                 @{nameof(MediaTable.IsPending)},
-                @{nameof(MediaTable.Size)}
+                @{nameof(MediaTable.PendingStatus)}
             )
             RETURNING [{nameof(MediaTable.Id)}]", Map(media));
 
-        var mediaBlockSequence = 0;
-        var transcodedFileStream = new FileStream(transcodedFile, FileMode.Open, FileAccess.Read);
-
-        while (await sql.CreateMediaBlock(media.Id, mediaBlockSequence++, transcodedFileStream));
-
-        transcodedFileStream.Close();
-        await transcodedFileStream.DisposeAsync();
-
-        File.Delete(uploadedFile);
-        File.Delete(transcodedFile);
-
-        sql.Execute($@"UPDATE {MediaTable.TableName} 
-            SET [{nameof(MediaTable.IsPending)}] = 0
-            WHERE   [{nameof(MediaTable.Id)}] = @{nameof(MediaTable.Id)}", new
+        Task.Run(async () =>
         {
-            Id = media.Id
+            var configuration = sql.GetConfiguration();
+            var transcodedFile = Guid.NewGuid().ToString("N") + ".mp4";
+            MediaExtensions.TranscodeToH264(sql, media.Id, uploadedFile, transcodedFile);
+            var transcodedFileInfo = new FileInfo(transcodedFile);
+            sql.SetMediaPendingStatus(media.Id, "Uploading");
+            media.Size = transcodedFileInfo.Length;
+            var mediaBlockSequence = 0;
+            var transcodedFileStream = new FileStream(transcodedFile, FileMode.Open, FileAccess.Read);
+            
+            while (await sql.CreateMediaBlock(media.Id, mediaBlockSequence++, transcodedFileStream)) ;
+            
+            transcodedFileStream.Close();
+            await transcodedFileStream.DisposeAsync();
+            
+            File.Delete(uploadedFile);
+            File.Delete(transcodedFile);
+
+            sql.Execute($@"
+                UPDATE  {MediaTable.TableName} 
+                SET     [{nameof(MediaTable.IsPending)}] = 0,
+                        [{nameof(MediaTable.Size)}] = @{nameof(MediaTable.Size)}
+                WHERE   [{nameof(MediaTable.Id)}] = @{nameof(MediaTable.Id)}", new
+            {
+                Id = media.Id,
+                Size = media.Size
+            });
         });
 
         return media;
@@ -102,6 +119,7 @@ public static class MediaDataExtensions
     {
         Id = media.Id,
         IsPending = media.IsPending,
+        PendingStatus = media.PendingStatus,
         Title = media.Title,
         Size = media.Size
     };
@@ -110,6 +128,7 @@ public static class MediaDataExtensions
     {
         Id = media.Id,
         IsPending = media.IsPending,
+        PendingStatus  = media.PendingStatus,
         Title = media.Title,
         Size = media.Size
     };

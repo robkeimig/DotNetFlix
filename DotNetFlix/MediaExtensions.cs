@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.Data.SQLite;
+using System.Diagnostics;
+using DotNetFlix.Data;
 using Microsoft.AspNetCore.Http;
 
 namespace DotNetFlix;
@@ -157,56 +159,64 @@ internal static class MediaExtensions
         }
     }
 
-    public static TranscodingJobStatus TranscodeToH264(string inputPath, string outputPath, int? clipLengthSeconds = null, int? startTimeSeconds = 0, int? audioBitRate = 192, int constantRateFactor = 22)
+    public static void TranscodeToH264(string inputPath, string outputPath, int? clipLengthSeconds = null, int? startTimeSeconds = 0, int? audioBitRate = 192, int constantRateFactor = 22)
     {
-        var transcodingJobStatus = new TranscodingJobStatus();
+        string durationArg = clipLengthSeconds.HasValue ? $"-t {clipLengthSeconds.Value}" : string.Empty;
+        var mediaInformation = GetMediaInformation(inputPath);
 
-        Task.Run(() =>
+        ProcessStartInfo startInfo = new ProcessStartInfo
         {
-            string durationArg = clipLengthSeconds.HasValue ? $"-t {clipLengthSeconds.Value}" : string.Empty;
-            var mediaInformation = GetMediaInformation(inputPath);
+            FileName = "ffmpeg",
+            Arguments = $"-ss {startTimeSeconds} -i \"{inputPath}\" {durationArg} -c:v libx264 -preset slow -crf {constantRateFactor} -c:a aac -b:a {audioBitRate}k -movflags +faststart \"{outputPath}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = "ffmpeg",
-                Arguments = $"-ss {startTimeSeconds} -i \"{inputPath}\" {durationArg} -c:v libx264 -preset slow -crf {constantRateFactor} -c:a aac -b:a {audioBitRate}k -movflags +faststart \"{outputPath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using (Process process = new Process { StartInfo = startInfo })
-            {
-                process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
-                
-                process.ErrorDataReceived += (sender, e) =>
-                {
-                    //Parse current ffmpeg timestamp using regex pattern.
-                    //Convert to current total seconds.
-                    //Divide current total seconds by mediaInformation.TotalSeconds.
-                    transcodingJobStatus.Percentage = 0d / 1d;
-                    Console.WriteLine(e.Data);
-                };
-
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-                process.WaitForExit();
-            }
-
-            transcodingJobStatus.Complete = true;
-        });
-
-        return transcodingJobStatus;
+        using Process process = new Process { StartInfo = startInfo };
+        process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+        process.ErrorDataReceived += (sender, e) => Console.WriteLine(e.Data);
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        process.WaitForExit();
     }
 
-    public class TranscodingJobStatus 
+    public static void TranscodeToH264(SQLiteConnection sql, long mediaId, string inputPath, string outputPath, int? clipLengthSeconds = null, int? startTimeSeconds = 0, int? audioBitRate = 192, int constantRateFactor = 22)
     {
-        public bool Complete;
-        public double Percentage;
-    }
+        string durationArg = clipLengthSeconds.HasValue ? $"-t {clipLengthSeconds.Value}" : string.Empty;
+        var mediaInformation = GetMediaInformation(inputPath);
 
+        ProcessStartInfo startInfo = new ProcessStartInfo
+        {
+            FileName = "ffmpeg",
+            Arguments = $"-ss {startTimeSeconds} -i \"{inputPath}\" {durationArg} -c:v libx264 -preset slow -crf {constantRateFactor} -c:a aac -b:a {audioBitRate}k -movflags +faststart \"{outputPath}\"",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+
+        using Process process = new Process { StartInfo = startInfo };
+        
+        process.OutputDataReceived += (sender, e) => Console.WriteLine(e.Data);
+
+        process.ErrorDataReceived += (sender, e) =>
+        {
+            //Parse current ffmpeg timestamp using regex pattern.
+            //Convert to current total seconds.
+            //Divide current total seconds by mediaInformation.TotalSeconds.
+            //If valid % calculated from stderr line, invoke following:
+            sql.SetMediaPendingStatus(mediaId, $"Transcoding - TODO%");
+            Console.WriteLine(e.Data);
+        };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        process.WaitForExit();
+    }
 
     public class MediaInformation
     {
