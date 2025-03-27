@@ -33,6 +33,8 @@ public class MediaBlocksTable
 
 public static class MediaBlockDataExtensions
 {
+    static ReaderWriterLockSlim mediaBlockRwls = new ReaderWriterLockSlim();
+
     public static MediaBlock GetMediaBlock(this SQLiteConnection sql, long mediaId, long sequence)
     {
         var row = sql.QueryFirst<MediaBlocksTable>($@"
@@ -48,69 +50,73 @@ public static class MediaBlockDataExtensions
         return Map(row);
     }
 
-    public static async Task LoadMediaBlock(this SQLiteConnection sql, long id)
+    public static void LoadMediaBlock(this SQLiteConnection sql, long id)
     {
         var configuration = sql.GetConfiguration();
-        using var transaction = await sql.BeginTransactionAsync();
+        mediaBlockRwls.EnterUpgradeableReadLock();
 
-        var mediaBlockRow = await sql.QueryFirstAsync<MediaBlocksTable>($@"
+        var mediaBlockRow = sql.QueryFirst<MediaBlocksTable>($@"
             SELECT  * 
             FROM    {MediaBlocksTable.TableName} 
             WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
         {
             Id = id
-        }, transaction);
+        });
 
         var mediaBlock = Map(mediaBlockRow);
 
-        await sql.ExecuteAsync($@"UPDATE {MediaBlocksTable.TableName}
+        sql.Execute($@"UPDATE {MediaBlocksTable.TableName}
             SET [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] = @{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}
             WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
         {
             Id = mediaBlock.Id,
             LastAccessUnixTimestamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds(),
-        }, transaction);
+        });
 
-        if (!mediaBlock.IsCached)
+        if (mediaBlock.IsCached)
         {
-            var encryptedMediaBlockBuffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize + 256);
-            var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
-            var s3ObjectName = id.ToString();
-            var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
-            var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
-            var getObjectRequest = new GetObjectRequest
-            {
-                BucketName = configuration.AwsS3BucketName,
-                Key = s3ObjectName,
-            };
+            mediaBlockRwls.ExitUpgradeableReadLock();
+            return;
+        }
 
-            var mediaBlockStream = new FileStream(mediaBlockFile, FileMode.Create, FileAccess.Write, FileShare.Read);
-            
-            var getObjectResponse = await s3Client.GetObjectAsync(getObjectRequest);
-            var encryptedMediaBlockStream = new MemoryStream(encryptedMediaBlockBuffer, 0, (int)getObjectResponse.ContentLength);
-            await getObjectResponse.ResponseStream.CopyToAsync(encryptedMediaBlockStream);
-            encryptedMediaBlockStream.Position = 0;
+        mediaBlockRwls.EnterWriteLock();
 
-            Cryptography.DecryptStream(encryptedMediaBlockStream, mediaBlockStream, mediaBlock.EncryptionKey);
+        var encryptedMediaBlockBuffer = ArrayPool<byte>.Shared.Rent(Constants.MediaBlockSize + 256);
+        var mediaBlockFile = Path.Combine(Constants.MediaBlockCachePath, id.ToString());
+        var s3ObjectName = id.ToString();
+        var awsCredentials = new BasicAWSCredentials(configuration.AwsS3AccessKey, configuration.AwsS3SecretKey);
+        var s3Client = new AmazonS3Client(awsCredentials, RegionEndpoint.USEast1);
+        var getObjectRequest = new GetObjectRequest
+        {
+            BucketName = configuration.AwsS3BucketName,
+            Key = s3ObjectName,
+        };
 
-            encryptedMediaBlockStream.Dispose();
-            mediaBlockStream.Close();
-            mediaBlockStream.Dispose();
-            ArrayPool<byte>.Shared.Return(encryptedMediaBlockBuffer);
+        var mediaBlockStream = new FileStream(mediaBlockFile, FileMode.Create, FileAccess.Write, FileShare.Read);
 
-            await sql.ExecuteAsync($@"
+        var getObjectResponse = s3Client.GetObjectAsync(getObjectRequest).GetAwaiter().GetResult();
+        var encryptedMediaBlockStream = new MemoryStream(encryptedMediaBlockBuffer, 0, (int)getObjectResponse.ContentLength);
+        getObjectResponse.ResponseStream.CopyToAsync(encryptedMediaBlockStream).GetAwaiter().GetResult();
+        encryptedMediaBlockStream.Position = 0;
+
+        Cryptography.DecryptStream(encryptedMediaBlockStream, mediaBlockStream, mediaBlock.EncryptionKey);
+
+        encryptedMediaBlockStream.Dispose();
+        mediaBlockStream.Close();
+        mediaBlockStream.Dispose();
+        ArrayPool<byte>.Shared.Return(encryptedMediaBlockBuffer);
+
+        sql.Execute($@"
                 UPDATE  {MediaBlocksTable.TableName}
                 SET     [{nameof(MediaBlocksTable.IsCached)}] = 1
                 WHERE   [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
-            {
-                Id = mediaBlock.Id,
-            }, transaction);
+        {
+            Id = mediaBlock.Id,
+        });
 
-            Console.WriteLine($@"Cached Media Block {mediaBlock.Id}");
-        }
-
-        await transaction.CommitAsync();
-        await transaction.DisposeAsync();
+        mediaBlockRwls.ExitWriteLock();
+        mediaBlockRwls.ExitUpgradeableReadLock();
+        Console.WriteLine($@"Cached Media Block {mediaBlock.Id}");
     }
 
     public static void ShrinkMediaBlockCache(this SQLiteConnection sql)
@@ -124,14 +130,14 @@ public static class MediaBlockDataExtensions
 
         if (totalSize > configuration.CacheSize)
         {
-            using var transaction = sql.BeginTransaction();
+            mediaBlockRwls.EnterWriteLock();
 
             var mediaBlockRow = sql.QueryFirst<MediaBlocksTable>($@"
                     SELECT      *
                     FROM        {MediaBlocksTable.TableName} 
                     WHERE       [{nameof(MediaBlocksTable.IsCached)}] = 1
                     ORDER BY    [{nameof(MediaBlocksTable.LastAccessUnixTimestamp)}] ASC 
-                    LIMIT       1", transaction);
+                    LIMIT       1");
 
             var mediaBlock = Map(mediaBlockRow);
 
@@ -141,10 +147,10 @@ public static class MediaBlockDataExtensions
                 WHERE [{nameof(MediaBlocksTable.Id)}] = @{nameof(MediaBlocksTable.Id)}", new
             {
                 Id = mediaBlock.Id
-            }, transaction);
+            });
 
             File.Delete(Path.Combine(Constants.MediaBlockCachePath, mediaBlock.Id.ToString()));
-            transaction.Commit();
+            mediaBlockRwls.ExitWriteLock();
             Console.WriteLine($"Expired Media Block {mediaBlock.Id} from cache.");
         }   
     }

@@ -32,7 +32,6 @@ internal class Status : Page
         }
     }
 
-    
     string Html(List<Media> pendingMedia) => $@"
 <div class='container'>
      <form action='/' method='POST' enctype='multipart/data'>
@@ -49,9 +48,12 @@ internal class Status : Page
             </tr>
         </thead>
         <tbody id='{StatusTableBodyElement}'>
-            <tr colspan=2>
-                <td>Loading...</td>
+            {string.Join('\n', pendingMedia.Select(media => $@"
+            <tr>
+                <td>{media.Title}</td>
+                <td>{media.PendingStatus}</td>
             </tr>
+            "))}
         </tbody>
     </table>
 </div>
@@ -59,5 +61,9 @@ internal class Status : Page
 
     string Css() => $@"";
 
-    string Js() => $@"//TODO: Periodically refresh StatusTableBodyElement with all Media items having IsPending == true.";
+    string Js() => $@"
+setInterval(function() {{
+     window.location.href = window.location.href;
+}}, 5000); 
+";
 }

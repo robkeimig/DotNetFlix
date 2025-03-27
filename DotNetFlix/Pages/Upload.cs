@@ -106,7 +106,6 @@ internal class Upload : Page
                     using var fileStream = new FileStream(fileUploadId+extension, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Write, 4096, true);
                     fileStream.Seek(filePartSequence * Constants.UploadPartSize, SeekOrigin.Begin);
                     await file.CopyToAsync(fileStream);
-                    Console.WriteLine(filePartSequence);
                     break;
                 }
             case CompleteUploadAction:

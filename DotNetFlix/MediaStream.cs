@@ -102,7 +102,7 @@ internal class MediaStream : Stream
                 }
 
                 var mediaBlock = _sql.GetMediaBlock(_mediaId, mediaBlockSequence);
-                await _sql.LoadMediaBlock(mediaBlock.Id);
+                _sql.LoadMediaBlock(mediaBlock.Id);
 
                 _mediaBlockStream = new FileStream(Path.Combine(Constants.MediaBlockCachePath, mediaBlock.Id.ToString()), FileMode.Open, FileAccess.Read, FileShare.Read);
                 _mediaBlockSequence = mediaBlockSequence;
