@@ -1,5 +1,6 @@
 ﻿using System.Data.SQLite;
 using System.Diagnostics;
+using System.Text.RegularExpressions;
 using DotNetFlix.Data;
 using Microsoft.AspNetCore.Http;
 
@@ -204,11 +205,13 @@ internal static class MediaExtensions
 
         process.ErrorDataReceived += (sender, e) =>
         {
-            //Parse current ffmpeg timestamp using regex pattern.
-            //Convert to current total seconds.
-            //Divide current total seconds by mediaInformation.TotalSeconds.
-            //If valid % calculated from stderr line, invoke following:
-            sql.SetMediaPendingStatus(mediaId, $"Transcoding - TODO%");
+            var currentTimestamp = ParseLoggedTimestamp(e.Data);
+            if (currentTimestamp.HasValue)
+            {
+                var progress = (int)(1f * currentTimestamp.Value.TotalSeconds / mediaInformation.LengthSeconds * 100f);
+                sql.SetMediaPendingStatus(mediaId, $"Transcoding - {progress}%");
+            }
+            
             Console.WriteLine(e.Data);
         };
 
@@ -217,6 +220,33 @@ internal static class MediaExtensions
         process.BeginErrorReadLine();
         process.WaitForExit();
     }
+
+    public static TimeSpan? ParseLoggedTimestamp(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return null;
+        string pattern = @"time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})";
+        Match match = Regex.Match(input, pattern);
+        
+        if (match.Success)
+        {
+            try
+            {
+                int hours = int.Parse(match.Groups[1].Value);
+                int minutes = int.Parse(match.Groups[2].Value);
+                int seconds = int.Parse(match.Groups[3].Value);
+                double milliseconds = double.Parse("0." + match.Groups[4].Value);
+                TimeSpan timeSpan = new TimeSpan(hours, minutes, seconds).Add(TimeSpan.FromMilliseconds(milliseconds));
+                return timeSpan;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
 
     public class MediaInformation
     {

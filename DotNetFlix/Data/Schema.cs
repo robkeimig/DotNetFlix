@@ -59,6 +59,7 @@ CREATE TABLE {MediaTable.TableName} (
     [{nameof(MediaTable.Id)}] INTEGER PRIMARY KEY,
     [{nameof(MediaTable.Title)}] TEXT,
     [{nameof(MediaTable.IsPending)}] INTEGER,
+    [{nameof(MediaTable.PendingStatus)}] TEXT,
     [{nameof(MediaTable.Size)}] INTEGER);
 
 CREATE TABLE {MediaBlocksTable.TableName} (
