@@ -46,6 +46,16 @@ public static class MediaDataExtensions
         return Map(row);
     }
 
+    public static List<Media> GetPendingMedia(this SQLiteConnection sql)
+    {
+        var rows = sql.Query<MediaTable>($@"
+            SELECT  *
+            FROM    {MediaTable.TableName}
+            WHERE   [{nameof(MediaTable.IsPending)}] = 1");
+
+        return Map(rows);
+    }
+
     public static void SetMediaPendingStatus(this SQLiteConnection sql, long mediaId, string status)
     {
         sql.Execute($@"
