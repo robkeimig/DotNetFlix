@@ -10,6 +10,7 @@ sql.Open();
 sql.EnsureSchema();
 sql.InitializeSettings();
 
+var upnpServer = new UpnpServer();
 var webServer = new WebServer(sql);
 
 var shrinkMediaBlockCacheStopWatch = new Stopwatch();
